@@ -72,8 +72,14 @@ export function isInsideZone(point: LatLng, zone: ServiceZone): boolean {
       return true;
     }
 
-    const intersects = ((segA.lat > point.lat) !== (segB.lat > point.lat)) &&
-      (point.lng < (segB.lng - segA.lng) * (point.lat - segB.lat) / (segB.lat - segA.lat) + segA.lng);
+    // Пересечение луча с ребром. Параметр вдоль ребра и свободный член обязаны считаться
+    // от одной и той же вершины: `(point.lat - segA.lat)` вместе с `+ segA.lng`. Если взять
+    // разность от segB, а свободный член от segA, проверяется ребро, сдвинутое вбок,
+    // и точки за границей зоны (до ширины ребра) ошибочно считаются внутренними.
+    const intersects =
+      ((segA.lat > point.lat) !== (segB.lat > point.lat)) &&
+      point.lng <
+        ((segB.lng - segA.lng) * (point.lat - segA.lat)) / (segB.lat - segA.lat) + segA.lng;
 
     if (intersects) {
       inside = !inside;

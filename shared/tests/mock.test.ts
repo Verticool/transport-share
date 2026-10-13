@@ -107,6 +107,22 @@ describe('mock/*.json — валидация', () => {
     expect(new Set(codes).size).toBe(40);
   });
 
+  // 4.1. Проверка именно ФАЙЛА, а не генератора в памяти: фронт на стадиях S3–S7 читает
+  // mock/scooters.json, и он обязан быть согласован с зоной так же, как результат генерации.
+  it('файл mock/scooters.json: все самокаты внутри зоны', () => {
+    const raw = readFileSync(join(import.meta.dirname, '../../mock/scooters.json'), 'utf8');
+    const parsed = z.array(ScooterSchema).safeParse(JSON.parse(raw));
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) {
+      return;
+    }
+
+    const outside = parsed.data
+      .filter((s) => !isInsideZone({ lat: s.lat, lng: s.lng }, SERVICE_ZONE))
+      .map((s) => s.code);
+    expect(outside).toEqual([]);
+  });
+
   // 5. ≥10 самокатов с batteryPct < 20, все они unavailable; ни один free не имеет < 20
   it('низкий заряд: ≥10 unavailable, ни один free не ниже порога', () => {
     const data = generateMock();

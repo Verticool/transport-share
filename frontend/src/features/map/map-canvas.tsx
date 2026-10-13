@@ -1,6 +1,11 @@
+import type { Scooter } from '@sharing/shared';
 import type Map from 'ol/Map';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
+import type Feature from 'ol/Feature';
+import type Point from 'ol/geom/Point';
+import { fromLonLat } from 'ol/proj';
+import type VectorSource from 'ol/source/Vector';
 import { Minus, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
 
@@ -9,13 +14,21 @@ import { basemapFor, MAP_ZOOM, ZONE } from '../../config/map';
 import { useTheme } from '../../hooks/use-theme';
 import { createParkMap } from '../../lib/map/create-map';
 import { createBasemapLayer, createZoneLayer, zoneExtent, ZONE_LAYER_Z_INDEX } from '../../lib/map/layers';
+import { createMarkerStyle, createParkLayer, PARK_LAYER_Z_INDEX } from '../../lib/map/scooter-layer';
 import { cn } from '../../lib/utils';
 import { useThemeStore } from '../../stores/theme';
 
 export interface MapCanvasProps {
+  /** Самокаты для отображения: пустой список — карта без маркеров. */
+  scooters: Scooter[];
+  /** Выбранный самокат: карта подводит к нему вид. */
+  selectedId?: string | null;
   /** Дополнительные классы контейнера. */
   className?: string;
 }
+
+/** Зум, к которому подводится вид при выборе самоката в списке. */
+const SELECT_ZOOM = 16;
 
 /**
  * Карта парка как React-компонент.
@@ -26,12 +39,13 @@ export interface MapCanvasProps {
  * частью интерфейса, а не библиотечной врезкой, и следует теме приложения.
  *
  * Стили слоёв живут на канвасе, который не читает CSS-переменные, поэтому при смене темы
- * стиль зоны пересобирается из токенов.
+ * пересобираются и подложка, и цвета зоны, и маркеры.
  */
-export function MapCanvas({ className }: MapCanvasProps) {
+export function MapCanvas({ scooters, selectedId = null, className }: MapCanvasProps) {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const parkLayerRef = useRef<VectorLayer<VectorSource<Feature<Point>>> | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -43,6 +57,12 @@ export function MapCanvas({ className }: MapCanvasProps) {
     // отдельный эффект ниже — иначе смена темы пересобирала бы карту целиком.
     const map = createParkMap(container, useThemeStore.getState().theme);
     mapRef.current = map;
+
+    // Слой маркеров добавляется сразу и пустым: самокаты придут отдельным эффектом,
+    // чтобы загрузка данных не пересобирала карту.
+    const parkLayer = createParkLayer([], useThemeStore.getState().theme);
+    parkLayerRef.current = parkLayer;
+    map.addLayer(parkLayer);
 
     // Подгоняем вид по зоне: пользователь обязан видеть границу обслуживания целиком,
     // а фиксированный зум из конфига этого не гарантирует при другом размере окна.
@@ -59,6 +79,7 @@ export function MapCanvas({ className }: MapCanvasProps) {
       observer.disconnect();
       map.setTarget(undefined);
       mapRef.current = null;
+      parkLayerRef.current = null;
     };
   }, []);
 
@@ -68,10 +89,10 @@ export function MapCanvas({ className }: MapCanvasProps) {
       return;
     }
 
-    // Смена темы задевает то, что живёт вне CSS: подложку карты и стиль слоя зоны.
+    // Смена темы задевает то, что живёт вне CSS: подложку карты, стиль зоны и цвет маркеров.
     const basemap = createBasemapLayer(basemapFor(theme));
-    const refreshedZone = createZoneLayer(ZONE);
-    const zoneStyle = refreshedZone.getStyle();
+    const zoneStyle = createZoneLayer(ZONE).getStyle();
+    const markerStyle = createMarkerStyle(theme);
 
     map.getLayers().forEach((layer) => {
       if (layer instanceof TileLayer) {
@@ -80,9 +101,40 @@ export function MapCanvas({ className }: MapCanvasProps) {
       if (layer instanceof VectorLayer && layer.getZIndex() === ZONE_LAYER_Z_INDEX) {
         layer.setStyle(zoneStyle);
       }
+      if (layer instanceof VectorLayer && layer.getZIndex() === PARK_LAYER_Z_INDEX) {
+        layer.setStyle(markerStyle);
+      }
     });
     map.render();
   }, [theme]);
+
+  useEffect(() => {
+    const parkLayer = parkLayerRef.current;
+    if (parkLayer === null) {
+      return;
+    }
+    // Полный пересбор набора: 40 объектов обновляются мгновенно, а дельты по WebSocket
+    // появятся вместе с сервером (S11) — тогда здесь будет точечное обновление.
+    parkLayer.setSource(createParkLayer(scooters, useThemeStore.getState().theme).getSource());
+  }, [scooters, theme]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map === null || selectedId === null) {
+      return;
+    }
+
+    const selected = scooters.find((scooter) => scooter.id === selectedId);
+    if (selected === undefined) {
+      return;
+    }
+
+    map.getView().animate({
+      center: fromLonLat([selected.lng, selected.lat]),
+      zoom: Math.max(map.getView().getZoom() ?? MAP_ZOOM, SELECT_ZOOM),
+      duration: 300,
+    });
+  }, [selectedId, scooters]);
 
   const zoomBy = useCallback((step: number) => {
     const view = mapRef.current?.getView();

@@ -11,8 +11,8 @@ import { useThemeStore } from '../src/stores/theme';
  * что и в браузере (заглушка `ResizeObserver` подключена в setup.ts). Смысл проверок —
  * что компонент не оставляет за собой «мёртвых» карт и переживает смену темы.
  */
-function renderCanvas(strict = false) {
-  const canvas = <MapCanvas />;
+function renderCanvas(strict = false, scooters: Parameters<typeof MapCanvas>[0]['scooters'] = []) {
+  const canvas = <MapCanvas scooters={scooters} />;
   return render(strict ? <StrictMode>{canvas}</StrictMode> : canvas);
 }
 

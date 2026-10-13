@@ -1,4 +1,4 @@
-import type { ServiceZone } from '@sharing/shared';
+import type { LatLng, ServiceZone } from '@sharing/shared';
 import { SERVICE_ZONE } from '@sharing/shared';
 
 import type { Theme } from '../lib/theme';
@@ -51,8 +51,11 @@ export function basemapFor(theme: Theme): Basemap {
   return theme === 'dark' ? DARK_BASEMAP : LIGHT_BASEMAP;
 }
 
-/** Центр и стартовый зум карты: центр Бишкека, зона обслуживания видна целиком. */
-export const MAP_CENTER: [number, number] = [74.5698, 42.8746];
+/** Центр Бишкека: стартовая точка карты и база для расчёта расстояний до самокатов. */
+export const MAP_CENTER_LATLNG: LatLng = { lat: 42.8746, lng: 74.5698 };
+
+/** Тот же центр в порядке координат OpenLayers — [долгота, широта]. */
+export const MAP_CENTER: [number, number] = [MAP_CENTER_LATLNG.lng, MAP_CENTER_LATLNG.lat];
 export const MAP_ZOOM = 13;
 
 /** Зона обслуживания для отрисовки: тот же объект, что используется расчётами. */
