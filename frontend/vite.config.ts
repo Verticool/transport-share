@@ -8,8 +8,10 @@ import tailwindcss from '@tailwindcss/vite';
  * nginx в контейнере делает то же самое. Поэтому CORS не нужен ни в одном режиме,
  * а фронт всегда обращается к относительным путям.
  *
- * Мок-данные на стадиях S3–S7 берутся из корневого каталога mock/ (общий источник с бэкендом):
- * он подключён как publicDir, поэтому файлы отдаются статикой по /<имя>.json и в dev, и в сборке.
+ * Мок-данные берутся из корневого каталога mock/ (общий источник с бэкендом) и подключаются как
+ * publicDir: файлы отдаются статикой по /<имя>.json. Это нужно только в режиме моков — в режиме
+ * сервера состояние приходит из API, и раскладывать те же данные файлами в собранной статике
+ * незачем (проверяется сборкой контейнера).
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -26,7 +28,10 @@ export default defineConfig({
       },
     },
   },
-  publicDir: fileURLToPath(new URL('../mock', import.meta.url)),
+  publicDir:
+    (process.env['VITE_API_MODE'] ?? 'mock') === 'http'
+      ? false
+      : fileURLToPath(new URL('../mock', import.meta.url)),
   build: {
     outDir: 'dist',
     sourcemap: true,

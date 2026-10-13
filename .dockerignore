@@ -1,0 +1,29 @@
+# Что не нужно контейнерам.
+#
+# Зависимости ставятся внутри образа (`npm ci`), поэтому локальные `node_modules` копировать
+# бессмысленно и вредно: они собраны под Windows и раздувают контекст сборки на сотни мегабайт.
+node_modules
+**/node_modules
+**/dist
+**/coverage
+frontend/test-results
+frontend/playwright-report
+
+# История репозитория, локальные настройки и артефакты разработки в образ не нужны.
+.git
+.gitignore
+**/.env
+**/.env.local
+docs
+metrics
+scripts
+prompts
+*.md
+!frontend/nginx.conf
+
+# Мусор среды: файлы IDE, журналы, временные файлы Windows.
+**/.vscode
+**/.idea
+**/*.log
+**/Thumbs.db
+**/Desktop.ini

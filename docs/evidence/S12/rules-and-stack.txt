@@ -1,0 +1,41 @@
+=== правила стека и типизации: сырые прогоны · 2026-10-13T18:44:09Z ===
+
+--- A2. язык бэкенда ---
+v26.7.0
+
+--- A3. фронт на React, Vue отсутствует ---
+24:    "react": "^19.3.0",
+поиск vue в манифестах:
+  ничего не найдено
+
+--- F1. приведения типов и заглушки типов ---
+  совпадений нет
+
+--- F2. non-null assertion ---
+  совпадений нет
+
+--- F3. any ---
+  совпадений нет
+
+--- F4. строгий typecheck по воркспейсам ---
+shared    exit 0 (ошибок нет)
+frontend  exit 0 (ошибок нет)
+backend   exit 0 (ошибок нет)
+
+--- F5. eslint (type-checked), 0 ошибок ---
+shared    нет замечаний
+frontend  нет замечаний
+backend   ЗАМЕЧАНИЯ
+
+--- F8. отключения правил: только с причиной в комментарии ---
+5
+frontend/src/features/account/use-account.ts:65:    // eslint-disable-next-line react-hooks/exhaustive-deps
+frontend/src/features/booking/use-booking.ts:102:    // eslint-disable-next-line react-hooks/set-state-in-effect
+frontend/src/features/booking/use-booking.ts:126:      // eslint-disable-next-line react-hooks/set-state-in-effect
+frontend/src/features/ride/use-ride.ts:119:    // eslint-disable-next-line react-hooks/set-state-in-effect
+frontend/src/features/ride/use-ride.ts:143:    // eslint-disable-next-line react-hooks/set-state-in-effect
+
+--- F5 (повтор после исправления в probe-container.ts) ---
+shared    нет замечаний
+frontend  нет замечаний
+backend   нет замечаний

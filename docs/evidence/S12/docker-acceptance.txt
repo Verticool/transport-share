@@ -1,0 +1,85 @@
+=== S12 · сборка в контейнерах и сдача · 2026-10-13T18:43:45Z ===
+
+--- 1. три постоянных контейнера (плюс два одноразовых для схемы и данных) ---
+backend: Up About a minute (healthy)
+db: Up About an hour (healthy)
+frontend: Up About a minute
+
+docker compose config --services:
+backend
+db
+db-migrate
+db-seed
+frontend
+
+--- 2. сборка фронта в контейнере: в образ попадает только статика, мок-данных нет ---
+50x.html
+assets
+index.html
+(/scooters.json отдаёт index.html приложения, а не данные:)
+<!doctype html>
+<html lang="ru" class="light">
+  <head>
+    
+
+--- 3. стек снаружи, как браузер: страница, API через прокси, поток событий ---
+страница: 200 (text/html)
+api через прокси: ok, схема применена (2 миграции), база доступна
+парк: 40 самокатов, свободен например SC-001
+вход: 200, пользователь demo@sharing.kg
+бронь через прокси: 201, самокат SC-001
+поток через прокси: снапшот, самокатов 40, seq 27
+поток через прокси: снапшот, самокатов 40, seq 28
+снятие брони: 204
+кадры потока: snapshot, snapshot, park.delta
+
+--- 4. два клиента одновременно ---
+Шаг 1. Два клиента входят разными пользователями
+  клиент demo@sharing.kg: вход 200
+  клиент alan@example.com: вход 200
+
+Шаг 2. Первый клиент бронирует свободный самокат
+  demo@sharing.kg → SC-001: 201
+  состояние самоката для наблюдателя: reserved
+
+Шаг 3. Второй клиент пытается забронировать тот же самокат
+  alan@example.com → SC-001: 409 conflict «Этот самокат сейчас недоступен»
+
+Шаг 4. Второй клиент бронирует другой самокат — это разрешено
+  alan@example.com → SC-002: 201
+
+Шаг 5. Первый клиент снимает бронь — самокат снова свободен для всех
+  отмена: 204, состояние самоката: free
+
+Итог: два клиента работают одновременно, чужую бронь перехватить нельзя,
+состояние парка общее. Второй клиент держит свою бронь: ed350356…
+
+--- 5. сквозные проверки интерфейса против собранного стека ---
+второй клиент увидел бронь за 7 мс
+  ok 1 [edge-live] › e2e-live\two-clients.spec.ts:35:1 › живой поток: состояние доезжает до второго клиента и бронь нельзя перехватить (1.6s)
+  ok 2 [edge-live] › e2e-live\two-clients.spec.ts:86:1 › обрыв связи не ломает экран: после восстановления состояние снова живое (522ms)
+  2 passed (3.0s)
+
+--- 6. таблицы базы в контейнере ---
+              List of relations
+ Schema |       Name        | Type  |  Owner  
+--------+-------------------+-------+---------
+ public | bookings          | table | sharing
+ public | emails            | table | sharing
+ public | invoices          | table | sharing
+ public | ride_events       | table | sharing
+ public | ride_pauses       | table | sharing
+ public | ride_points       | table | sharing
+ public | rides             | table | sharing
+ public | schema_migrations | table | sharing
+ public | scooters          | table | sharing
+ public | sessions          | table | sharing
+ public | users             | table | sharing
+(11 rows)
+
+
+--- 7. исправлено при сборке ---
+а) фронт-образ не собирался: контейнер не получал tsconfig.base.json, из-за чего tsc терял
+   allowImportingTsExtensions и падал на импортах общего пакета. Файл добавлен в COPY.
+б) мок-данные больше не раскладываются статикой в режиме сервера (publicDir выключается),
+   поэтому в образе только собранная статика.

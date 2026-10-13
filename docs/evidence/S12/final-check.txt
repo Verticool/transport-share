@@ -1,0 +1,64 @@
+=== финальная проверка проекта · 2026-10-13T18:46:16Z ===
+
+--- npm run check (типы + линтер + тесты по всем воркспейсам) ---
+ ✓ tests/use-ride.test.ts (7 tests) 587ms
+ ✓ tests/park-panel.test.tsx (8 tests) 583ms
+ ✓ tests/booking-ui.test.tsx (9 tests) 518ms
+ ✓ tests/map-canvas.test.tsx (7 tests) 505ms
+ ✓ tests/app.test.tsx (8 tests) 759ms
+ ✓ tests/http-client.test.ts (7 tests) 22ms
+ ✓ tests/api.test.ts (9 tests) 161ms
+ ✓ tests/scooter-layer.test.ts (8 tests) 128ms
+ ✓ tests/map-layers.test.ts (14 tests) 132ms
+
+ Test Files  15 passed (15)
+      Tests  132 passed (132)
+   Start at  00:46:35
+   Duration  3.69s (environment 59%, tests 20%, import 9%, setup 9%, transform 2%, worker 1%)
+
+Environment  jsdom was created 15 times · 17.65s total, 59% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+
+> @sharing/backend@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mE:/Work/transport-sharing/backend[39m
+
+ [2m[90m↓[39m[22m tests/db/api.test.ts [2m([22m[2m25 tests[22m[2m | [22m[33m25 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m tests/db/billing.test.ts [2m([22m[2m10 tests[22m[2m | [22m[33m10 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m tests/db/invariants.test.ts [2m([22m[2m12 tests[22m[2m | [22m[33m12 skipped[39m[2m)[22m
+ [32m✓[39m tests/unit/password.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 314[2mms[22m[39m
+ [32m✓[39m tests/unit/migrations.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/unit/mock-data.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/unit/env.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/unit/health.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m5 passed[39m[22m[2m | [22m[33m3 skipped[39m[90m (8)[39m
+[2m      Tests [22m [1m[32m20 passed[39m[22m[2m | [22m[33m47 skipped[39m[90m (67)[39m
+[2m   Start at [22m 00:46:39
+[2m   Duration [22m 2.38s[2m (transform 258ms, setup 0ms, collect 853ms, tests 344ms, environment 1ms, prepare 482ms)[22m
+
+
+--- тесты на живой базе ---
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m47 passed[39m[22m[90m (47)[39m
+
+--- e2e интерфейса на мок-данных ---
+  ok 1 [edge] › e2e\map.spec.ts:14:3 › карта парка › показывает 40 самокатов, зону обслуживания и подпись источника (1.1s)
+  ok 2 [edge] › e2e\map.spec.ts:26:3 › карта парка › карточка самоката показывает состояние, заряд и расстояние (1.1s)
+  ok 3 [edge] › e2e\map.spec.ts:39:3 › карта парка › панель парка считает сводку по статусам (912ms)
+  ok 4 [edge] › e2e\map.spec.ts:49:3 › вход и защищённые экраны › без входа кабинет не открывается, после входа — открывается (1.8s)
+  ok 5 [edge] › e2e\ride-flow.spec.ts:14:3 › поездка от брони до счёта › бронь, старт, пауза, завершение и счёт в кабинете (3.8s)
+  ok 6 [edge] › e2e\ride-flow.spec.ts:76:3 › поездка от брони до счёта › пока идёт бронь, другой самокат не забронировать: панель остаётся на первой брони (1.7s)
+  ok 7 [edge] › e2e\two-clients.spec.ts:22:1 › два пользователя видят каждый свой кабинет (4.0s)
+  ok 8 [edge] › e2e\two-clients.spec.ts:58:1 › второй клиент не видит пароль и сессию первого (1.0s)
+  8 passed (16.3s)
+
+--- e2e против собранных контейнеров ---
+второй клиент увидел бронь за 10 мс
+  ok 1 [edge-live] › e2e-live\two-clients.spec.ts:35:1 › живой поток: состояние доезжает до второго клиента и бронь нельзя перехватить (1.8s)
+  ok 2 [edge-live] › e2e-live\two-clients.spec.ts:86:1 › обрыв связи не ломает экран: после восстановления состояние снова живое (510ms)
+  2 passed (3.2s)
