@@ -30,12 +30,12 @@
 ## S1. Доменный контракт  ·  статус: [~] в работе  ·  делает О + В
 
 Готово и принято замером: `time.ts`, `zone.ts`, `money.ts` — **85 тестов зелёные**, `tsc --noEmit` exit 0,
-эталонная таблица цен сверена отдельным скриптом `npm run check:pricing`.
-Evidence: `docs/evidence/S1/acceptance-time-zone-money.txt`, `docs/evidence/S1/time-acceptance.txt`,
-`docs/evidence/S1/zone-fail-and-refix.txt`.
-В работе: `schemas.ts` (zod-схемы + тесты), `lint-fix` (55 нарушений `no-non-null-assertion`
-в `zone.ts` и тестах → `testing/factories.ts`).
-Осталось: `sim/` (симулятор движения и заряда), `testing/factories.ts` (в рамках lint-fix).
+`eslint` по этим модулям — 0 ошибок, эталонная таблица цен сверена отдельным скриптом `npm run check:pricing`.
+`shared/src/testing/factories.ts` — типизированные фикстуры и хелперы (`mustGet`, `mustBeDefined`).
+Evidence: `docs/evidence/S1/acceptance-time-zone-money.txt`, `time-acceptance.txt`,
+`zone-fail-and-refix.txt`, `lint-fix-by-orchestrator.txt`.
+В работе: `schemas.ts` (zod-схемы + тесты; воркер ещё не сдал, `tsc` пока падает на его файлах).
+Осталось: `sim/` (симулятор движения и заряда).
 
 Задачи:
 1. `docs/DOMAIN.md` — статусы и переходы, тарифы, пороги, зона, тайминги (референс для всех).

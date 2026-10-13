@@ -1,0 +1,71 @@
+СЫРЫЕ ВЫВОДЫ · S1 · устранение 55 нарушений no-non-null-assertion
+Кто: ОРКЕСТРАТОР (Hermes Agent). Воркер sa-0-4f3f4186 упал и работу не сдал.
+Дата: 2026-10-13 20:08–20:15
+
+------------------------------------------------------------------------------
+1) Что произошло с воркером (задание prompts/S1-lint-fix.md)
+
+delegation: deleg_c2cadadc, task 1/2
+status: failed
+duration: 186.65s
+error: "Model output entered a repetition loop and the stream was cut mid-loop;
+        discarding the degenerate response."
+
+Проверка состояния ПОСЛЕ падения (файлы не тронуты):
+$ ls shared/src/testing
+ls: cannot access 'shared/src/testing': No such file or directory        # factories.ts не создан
+$ npx eslint shared --format json | <подсчёт>
+shared/src/zone.ts        26 × @typescript-eslint/no-non-null-assertion
+shared/tests/time.test.ts 17 × @typescript-eslint/no-non-null-assertion
+shared/tests/zone.test.ts 12 × @typescript-eslint/no-non-null-assertion
+TOTAL: 55                                                               # ни одна правка не сделана
+
+Вывод: модель зациклилась на однотипной механической правке в 3 файлах. Задача отдана оркестратору.
+
+------------------------------------------------------------------------------
+2) Что сделано оркестратором
+
+Создан shared/src/testing/factories.ts:
+  mustGet<T>(items, index): T          — заменяет `items[i]!`, бросает понятную ошибку
+  mustBeDefined<T>(value, what?): T    — явная проверка null/undefined
+  fixedIso(ms): Iso
+  makeScooter / makeUser / makeBooking / makeRide / makeInvoice — типизированные фикстуры
+
+shared/src/zone.ts — введены типизированные хелперы вместо 26 `!`:
+  at(polygon, index): [number, number]        — точка полигона с проверкой индекса
+  edge(polygon, index): { a: LatLng; b: LatLng }  — ребро (i → i+1 % n)
+  polygonOrigin(polygon): LatLng              — опорная точка локальной СК
+  clampToZone: та же логика подбора отступа вынесена в offsetCandidate(),
+  добавлена защита от вырожденного ребра (norm === 0)
+
+shared/tests/time.test.ts (17 мест) и shared/tests/zone.test.ts (12 мест):
+  `result[0]!` / `polygon[i]!` → `mustGet(result, 0)` / `mustGet(polygon, i)`
+  Смысл и количество тестов не менялись.
+
+------------------------------------------------------------------------------
+3) Проверка после правок (сырой вывод)
+
+$ npx eslint shared/src/zone.ts shared/src/time.ts shared/src/money.ts shared/src/testing \
+    shared/tests/time.test.ts shared/tests/zone.test.ts shared/tests/money.test.ts
+eslint exit=0                                    # 0 ошибок, 0 предупреждений
+
+$ cd shared && npx vitest run tests/time.test.ts tests/zone.test.ts tests/money.test.ts
+ ✓ tests/time.test.ts (27 tests) 9ms
+ ✓ tests/zone.test.ts (28 tests) 15ms
+ Test Files  3 passed (3)
+      Tests  85 passed (85)                      # смысл тестов сохранён
+
+$ npx tsc --noEmit -p tsconfig.json | grep -v schemas
+(нет ошибок вне schemas)                         # остались только ошибки в schemas.ts,
+                                                 # который в этот момент ещё пишет другой воркер
+
+$ grep -nE '\w+!' shared/src/zone.ts shared/src/testing/factories.ts shared/tests/time.test.ts shared/tests/zone.test.ts | grep -v '!=' | grep -v '!=='
+(none)
+
+------------------------------------------------------------------------------
+4) Урок для процесса (внесён в скилл делегирования)
+
+- Механическая правка одного и того же паттерна в 50+ местах — плохая задача для локального
+  воркера: он входит в повтор и падает. Дробить по файлам либо делать оркестратору.
+- Падение воркера ничего не портит: он не успел ничего записать. Но проверять состояние
+  после падения обязательно — «упал» не значит «не навредил».
