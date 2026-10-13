@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T14:03:22.466Z",
+  "generatedAt": "2026-10-13T15:03:59.808Z",
   "project": "transport-sharing",
   "localStack": {
     "model": "KAT-Coder-V2.5-Dev-APEX-Compact.gguf",
@@ -50,41 +50,41 @@
     }
   },
   "totals": {
-    "batches": 2,
-    "workers": 5,
-    "apiCallCount": 41,
+    "batches": 6,
+    "workers": 16,
+    "apiCallCount": 199,
     "tokens": {
-      "cacheMiss": 126971,
-      "cacheHit": 1043259,
-      "output": 91656,
-      "total": 1261886
+      "cacheMiss": 794020,
+      "cacheHit": 9269082,
+      "output": 340771,
+      "total": 10403873
     },
-    "wallClockSeconds": 968.7,
-    "sumTaskSeconds": 1428.78,
-    "timeSavedByParallelismSeconds": 460.08,
-    "cacheHitShare": 0.8915,
+    "wallClockSeconds": 5338.93,
+    "sumTaskSeconds": 8624.51,
+    "timeSavedByParallelismSeconds": 3285.58,
+    "cacheHitShare": 0.9211,
     "costIfApi": {
       "deepseek-flash (DeepSeek-V4.1-Flash)": {
-        "peakUsd": 0.154338,
-        "offPeakUsd": 0.077169
+        "peakUsd": 0.702746,
+        "offPeakUsd": 0.351373
       },
       "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
-        "peakUsd": 0.576463,
-        "offPeakUsd": 0.288231
+        "peakUsd": 2.8054,
+        "offPeakUsd": 1.402699
       }
     },
     "savedUsd": {
       "deepseek-flash (DeepSeek-V4.1-Flash)": {
-        "peakUsd": 0.154338,
-        "offPeakUsd": 0.077169
+        "peakUsd": 0.702746,
+        "offPeakUsd": 0.351373
       },
       "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
-        "peakUsd": 0.576463,
-        "offPeakUsd": 0.288231
+        "peakUsd": 2.8054,
+        "offPeakUsd": 1.402699
       }
     },
     "localCostUsd": 0,
-    "parallelismFactor": 1.475
+    "parallelismFactor": 1.615
   },
   "batches": [
     {
@@ -225,6 +225,288 @@
         {
           "index": 1,
           "goal": "Выполнить задание из файла E:\\Work\\transport-sharing\\prompts\\S1-money.md: создать shared/src/money.ts и shared/tests/money.test.ts строго по контракту (billableMinutes, billRide, calcRidePrice, currentAmount, formatAmount, formatMinor) и правилам расчёта. Обязательны все тесты из таблицы сценариев (3100, 3100, 3100, 3700, 11500, 12500, 2700) и проверка целочисленности всех полей. В конце — сырой вывод tsc, vitest по своему файлу и grep на касты.",
+          "status": "unknown"
+        }
+      ]
+    },
+    {
+      "delegationId": "deleg_c2cadadc",
+      "state": "completed",
+      "dispatchedAt": "2026-10-13T14:06:41.069Z",
+      "completedAt": "2026-10-13T14:18:55.034Z",
+      "wallClockSeconds": 733.97,
+      "sumTaskSeconds": 1337.84,
+      "parallelismFactor": 1.823,
+      "timeSavedByParallelismSeconds": 603.87,
+      "apiCallCount": 40,
+      "workerCount": 3,
+      "tokens": {
+        "cacheMiss": 110469,
+        "cacheHit": 2098122,
+        "output": 50093,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "total": 2258684
+      },
+      "workerSessions": [
+        {
+          "sessionId": "20261013_200641_4ec088",
+          "apiCalls": 32,
+          "cacheMissTokens": 87040,
+          "cacheHitTokens": 1988271,
+          "outputTokens": 46017,
+          "seconds": 728.12
+        },
+        {
+          "sessionId": "20261013_200641_693e91",
+          "apiCalls": 5,
+          "cacheMissTokens": 22887,
+          "cacheHitTokens": 109266,
+          "outputTokens": 3494,
+          "seconds": 80.07
+        },
+        {
+          "sessionId": "20261013_200641_4ec088",
+          "apiCalls": 3,
+          "cacheMissTokens": 542,
+          "cacheHitTokens": 585,
+          "outputTokens": 582,
+          "seconds": 529.66
+        }
+      ],
+      "costIfApi": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.105841,
+          "offPeakUsd": 0.052921
+        },
+        "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+          "peakUsd": 0.436505,
+          "offPeakUsd": 0.218252
+        }
+      },
+      "localCostUsd": 0,
+      "savedUsd": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.105841,
+          "offPeakUsd": 0.052921
+        }
+      },
+      "tasks": [
+        {
+          "index": 0,
+          "goal": "Выполнить задание E:\\Work\\transport-sharing\\prompts\\S1-lint-fix.md: убрать 55 нарушений @typescript-eslint/no-non-null-assertion (26 в shared/src/zone.ts, 17 в shared/tests/time.test.ts, 12 в shared/tests/zone.test.ts) и создать shared/src/testing/factories.ts с типизированными хелперами (mustGet, mustBeDefined, makeScooter/makeUser/makeBooking/makeRide/makeInvoice, fixedIso). Поведение функций и смысл тестов менять нельзя; приведений типов и any — не добавлять. Привести сырой вывод: eslint shared (0 ошибок), tsc --noEmit, vitest run (85 тестов зелёные), grep на `!`.",
+          "status": "unknown"
+        },
+        {
+          "index": 1,
+          "goal": "Выполнить задание E:\\Work\\transport-sharing\\prompts\\S1-schemas.md: создать shared/src/schemas.ts (zod-схемы домена, входных данных ручек, ws-протокола и хелперы parseOrThrow/safeParseResult) и shared/tests/schemas.test.ts (минимум 25 тестов на валидные/невалидные случаи). Схемы обязаны быть совместимы с типами из shared/src/domain.ts (проверять через типовые аннотации z.ZodType<T>, без приведений). Привести сырой вывод: tsc --noEmit, vitest по своему файлу, eslint по своим двум файлам.",
+          "status": "unknown"
+        }
+      ]
+    },
+    {
+      "delegationId": "deleg_0807b23b",
+      "state": "error",
+      "dispatchedAt": "2026-10-13T14:19:36.325Z",
+      "completedAt": "2026-10-13T14:38:16.917Z",
+      "wallClockSeconds": 1120.59,
+      "sumTaskSeconds": 878.23,
+      "parallelismFactor": 0.784,
+      "timeSavedByParallelismSeconds": -242.36,
+      "apiCallCount": 17,
+      "workerCount": 1,
+      "tokens": {
+        "cacheMiss": 81074,
+        "cacheHit": 784650,
+        "output": 31605,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "total": 897329
+      },
+      "workerSessions": [
+        {
+          "sessionId": "20261013_201936_5d9cd4",
+          "apiCalls": 17,
+          "cacheMissTokens": 81074,
+          "cacheHitTokens": 784650,
+          "outputTokens": 31605,
+          "seconds": 878.23
+        }
+      ],
+      "costIfApi": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.066956,
+          "offPeakUsd": 0.033478
+        },
+        "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+          "peakUsd": 0.266698,
+          "offPeakUsd": 0.133349
+        }
+      },
+      "localCostUsd": 0,
+      "savedUsd": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.066956,
+          "offPeakUsd": 0.033478
+        }
+      },
+      "tasks": [
+        {
+          "index": 0,
+          "goal": "Выполнить задание E:\\Work\\transport-sharing\\prompts\\S1-sim.md: создать shared/src/sim/index.ts (детерминированный симулятор транспорта: createRng, stepScooter, stepFleet, pickWaypoint, типы SimScooter/StepOptions/StepResult/FleetStepResult) и shared/tests/sim.test.ts (минимум 14 тестов на все 10 правил из задания). Сигнатуры контракта менять нельзя, приведений типов и any — не добавлять. Привести сырой вывод: tsc --noEmit, vitest по своему файлу, eslint по своим файлам.",
+          "status": "unknown"
+        }
+      ]
+    },
+    {
+      "delegationId": "deleg_e777f322",
+      "state": "error",
+      "dispatchedAt": "2026-10-13T14:20:12.314Z",
+      "completedAt": "2026-10-13T14:39:23.589Z",
+      "wallClockSeconds": 1151.27,
+      "sumTaskSeconds": 1131.98,
+      "parallelismFactor": 0.983,
+      "timeSavedByParallelismSeconds": -19.29,
+      "apiCallCount": 27,
+      "workerCount": 2,
+      "tokens": {
+        "cacheMiss": 186164,
+        "cacheHit": 1720982,
+        "output": 37353,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "total": 1944499
+      },
+      "workerSessions": [
+        {
+          "sessionId": "20261013_202012_6d09d0",
+          "apiCalls": 26,
+          "cacheMissTokens": 170291,
+          "cacheHitTokens": 1720982,
+          "outputTokens": 34694,
+          "seconds": 1131.98
+        },
+        {
+          "sessionId": "20261013_202012_6d09d0",
+          "apiCalls": 1,
+          "cacheMissTokens": 15873,
+          "cacheHitTokens": 0,
+          "outputTokens": 2659,
+          "seconds": 0
+        }
+      ],
+      "costIfApi": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.110999,
+          "offPeakUsd": 0.055499
+        },
+        "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+          "peakUsd": 0.469378,
+          "offPeakUsd": 0.234689
+        }
+      },
+      "localCostUsd": 0,
+      "savedUsd": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.110999,
+          "offPeakUsd": 0.055499
+        }
+      },
+      "tasks": [
+        {
+          "index": 0,
+          "goal": "Выполнить задание E:\\Work\\transport-sharing\\prompts\\S2-mock.md: написать scripts/generate-mock.mjs (детерминированный генератор мок-данных: 40 самокатов в центре Бишкека внутри полигона зоны, 6 пользователей, 25 завершённых поездок с корректным breakdown через calcRidePrice, 25 счетов, 25 писем, service-zone.json) и shared/tests/mock.test.ts (минимум 15 тестов: формы по zod-схемам, ссылочная целостность, суммы сходятся с пересчётом, ≥25% самокатов с низким зарядом и все unavailable, детерминизм). Запустить генератор так, чтобы каталог mock/ с шестью JSON-файлами появился, и доказать детерминизм через md5sum. Привести сырой вывод: генератор дважды + md5sum, tsc --noEmit, vitest по своему файлу, eslint по своим файлам.",
+          "status": "unknown"
+        }
+      ]
+    },
+    {
+      "delegationId": "deleg_48aa97e5",
+      "state": "error",
+      "dispatchedAt": "2026-10-13T14:40:21.841Z",
+      "completedAt": "2026-10-13T15:03:06.242Z",
+      "wallClockSeconds": 1364.4,
+      "sumTaskSeconds": 3847.68,
+      "parallelismFactor": 2.82,
+      "timeSavedByParallelismSeconds": 2483.28,
+      "apiCallCount": 74,
+      "workerCount": 5,
+      "tokens": {
+        "cacheMiss": 289342,
+        "cacheHit": 3622069,
+        "output": 130064,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "total": 4041475
+      },
+      "workerSessions": [
+        {
+          "sessionId": "20261013_204021_ae7a1b",
+          "apiCalls": 22,
+          "cacheMissTokens": 63378,
+          "cacheHitTokens": 986052,
+          "outputTokens": 74622,
+          "seconds": 1347.92
+        },
+        {
+          "sessionId": "20261013_204021_60786f",
+          "apiCalls": 41,
+          "cacheMissTokens": 212368,
+          "cacheHitTokens": 2634457,
+          "outputTokens": 49751,
+          "seconds": 1109.01
+        },
+        {
+          "sessionId": "20261013_204021_60786f",
+          "apiCalls": 2,
+          "cacheMissTokens": 616,
+          "cacheHitTokens": 195,
+          "outputTokens": 455,
+          "seconds": 949.79
+        },
+        {
+          "sessionId": "20261013_204021_60786f",
+          "apiCalls": 1,
+          "cacheMissTokens": 9849,
+          "cacheHitTokens": 0,
+          "outputTokens": 3775,
+          "seconds": 0
+        },
+        {
+          "sessionId": "20261013_204021_ae7a1b",
+          "apiCalls": 8,
+          "cacheMissTokens": 3131,
+          "cacheHitTokens": 1365,
+          "outputTokens": 1461,
+          "seconds": 440.95
+        }
+      ],
+      "costIfApi": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.264612,
+          "offPeakUsd": 0.132306
+        },
+        "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+          "peakUsd": 1.056356,
+          "offPeakUsd": 0.528178
+        }
+      },
+      "localCostUsd": 0,
+      "savedUsd": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.264612,
+          "offPeakUsd": 0.132306
+        }
+      },
+      "tasks": [
+        {
+          "index": 0,
+          "goal": "Выполнить задание E:\\Work\\transport-sharing\\prompts\\S1-sim-fix.md: довести shared/src/sim/index.ts и shared/tests/sim.test.ts до зелёного состояния (сейчас tsc даёт 5 ошибок, 11 тестов красные). Публичные сигнатуры менять нельзя, приведений типов и any не добавлять, тесты под вывод не подгонять. Привести сырой вывод: tsc --noEmit, vitest по своему файлу, eslint по своим файлам.",
+          "status": "unknown"
+        },
+        {
+          "index": 1,
+          "goal": "Выполнить задание E:\\Work\\transport-sharing\\prompts\\S2-mock-fix.md: починить eslint и tsc в scripts/generate-mock.mjs, scripts/generate-mock.d.ts и shared/tests/mock.test.ts (сейчас: /* eslint-env */ больше не поддерживается, @ts-ignore запрещён, неиспользуемая randomIso, 11 ошибок implicit any/unknown из-за отсутствия точных деклараций). Декларации должны давать точные доменные типы, а не any/unknown; касты и @ts-* запрещены. Данные и их смысл не менять. Привести сырой вывод: генератор дважды + md5sum (детерминизм), tsc --noEmit, vitest по своему файлу, eslint по трём файлам.",
           "status": "unknown"
         }
       ]

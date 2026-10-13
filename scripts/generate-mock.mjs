@@ -272,7 +272,10 @@ export function generateMock() {
 
 const data = generateMock();
 
-const mockDir = join(process.cwd(), 'mock');
+// Каталог mock/ лежит в корне репозитория и определяется относительно самого скрипта:
+// process.cwd() здесь не годится — запуск из shared/ (например, импорт из теста) создавал
+// дубликат shared/mock/ и мок-данные расходились по двум местам.
+const mockDir = join(import.meta.dirname, '..', 'mock');
 mkdirSync(mockDir, { recursive: true });
 
 const files = /** @type {const} */ ([
