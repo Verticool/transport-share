@@ -27,15 +27,13 @@
 
 Критерий: `npm run typecheck` по всем воркспейсам — exit 0; `npm run check` зелёный; grep по `RULES.md §F.6` пуст (сырые выводы).
 
-## S1. Доменный контракт  ·  статус: [~] в работе  ·  делает О + В
+## S1. Доменный контракт  ·  статус: [x] закрыт  ·  делает О + В
 
-Готово и принято замером: `time.ts`, `zone.ts`, `money.ts` — **85 тестов зелёные**, `tsc --noEmit` exit 0,
-`eslint` по этим модулям — 0 ошибок, эталонная таблица цен сверена отдельным скриптом `npm run check:pricing`.
-`shared/src/testing/factories.ts` — типизированные фикстуры и хелперы (`mustGet`, `mustBeDefined`).
-Evidence: `docs/evidence/S1/acceptance-time-zone-money.txt`, `time-acceptance.txt`,
-`zone-fail-and-refix.txt`, `lint-fix-by-orchestrator.txt`.
-В работе: `schemas.ts` (zod-схемы + тесты; воркер ещё не сдал, `tsc` пока падает на его файлах).
-Осталось: `sim/` (симулятор движения и заряда).
+Готово и принято замером: `time.ts`, `zone.ts`, `money.ts`, `schemas.ts`, `sim/index.ts`,
+`testing/factories.ts` — **184 теста зелёные**, `tsc --noEmit` exit 0, `eslint` 0 ошибок,
+эталонная таблица цен сверена скриптом `npm run check:pricing` (7/7).
+Evidence: `docs/evidence/S1/` (`acceptance-time-zone-money.txt`, `time-acceptance.txt`,
+`zone-fail-and-refix.txt`, `lint-fix-by-orchestrator.txt`, `sim-mock-context-failures.txt`).
 
 Задачи:
 1. `docs/DOMAIN.md` — статусы и переходы, тарифы, пороги, зона, тайминги (референс для всех).
@@ -48,7 +46,14 @@ Evidence: `docs/evidence/S1/acceptance-time-zone-money.txt`, `time-acceptance.tx
 Критерий: `npm test -w shared` — все зелёные, счёт assertion'ов в выводе; таблица цен из `DOMAIN.md`
 проверена тестом дословно.
 
-## S2. Мок-данные  ·  статус: [ ]  ·  делает В (локальная модель) + О (проверка)
+## S2. Мок-данные  ·  статус: [x] закрыт  ·  делает В (локальная модель) + О (проверка)
+
+Готово: `scripts/generate-mock.mjs` (mulberry32, детерминированный) + `scripts/generate-mock.d.mts`
+(точные доменные типы) + `shared/tests/mock.test.ts` (20 тестов) + каталог `mock/` с шестью JSON.
+Принято замером: `tsc` 0, `eslint` 0, **20/20 тестов**, `md5` двух прогонов генератора совпадают;
+в парке 40 самокатов (19 free / 6 reserved / 5 in_ride / 10 unavailable), все 10 с зарядом <20 %
+помечены `unavailable`, 25 поездок со счетами (55–263 сом) и 25 писем, ссылочная целостность
+и временная согласованность проверены тестами. Коммит `aa1a94e`.
 
 Задачи:
 1. Воркер генерирует `mock/*.json`: 40 самокатов в центре Бишкека (код, модель, статус, заряд, координаты),
