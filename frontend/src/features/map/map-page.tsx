@@ -1,21 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { MapCanvas } from './map-canvas';
 
 /**
- * Экран карты. Наполнение (OpenLayers, маркеры парка, зона) добавляется следующей задачей;
- * сейчас — контейнер и заголовок, чтобы каркас был проверяем и не пустовал.
+ * Экран карты: слева карта парка, справа панель с легендой и списком самокатов.
+ * Маркеры и список подключаются следующей задачей — сейчас проверяется сама карта.
  */
 export function MapPage() {
   return (
     <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div
-        className="relative min-h-[420px] overflow-hidden rounded-xl border bg-muted"
-        data-testid="map-container"
-        role="region"
-        aria-label="Карта самокатов"
-      >
-        <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
-          Здесь будет карта парка
-        </div>
+      <div className="relative min-h-[420px] overflow-hidden rounded-xl border">
+        <MapCanvas />
       </div>
 
       <aside className="flex flex-col gap-4" aria-label="Панель парка">

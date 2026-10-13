@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-
-import { writeLocalStorage } from '../lib/storage';
-import { applyTheme, readStoredTheme, THEME_STORAGE_KEY, type Theme } from '../lib/theme';
+import { useThemeStore } from '../stores/theme';
+import type { Theme } from '../lib/theme';
 
 export interface UseThemeResult {
   theme: Theme;
@@ -10,27 +8,13 @@ export interface UseThemeResult {
 }
 
 /**
- * Тема интерфейса: светлая по умолчанию, тёмная — по переключателю.
- *
- * Тема применяется классом на <html> (токены в global.css), выбор сохраняется в localStorage.
- * Запись в хранилище идёт из эффекта, а не из обработчика: так состояние и хранилище
- * не могут разойтись при любом способе смены темы.
+ * Тема интерфейса для компонентов. Значение живёт в общем сторе (см. `stores/theme.ts`),
+ * поэтому переключатель в шапке и карта видят одну и ту же схему, а не каждый свою копию.
  */
 export function useTheme(): UseThemeResult {
-  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme());
-
-  useEffect(() => {
-    applyTheme(theme);
-    writeLocalStorage(THEME_STORAGE_KEY, theme);
-  }, [theme]);
-
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
+  const toggleTheme = useThemeStore((state) => state.toggleTheme);
 
   return { theme, setTheme, toggleTheme };
 }

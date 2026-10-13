@@ -10,6 +10,7 @@ import Fill from 'ol/style/Fill';
 import Stroke from 'ol/style/Stroke';
 import { fromLonLat } from 'ol/proj';
 import type TileSource from 'ol/source/Tile';
+import type { Extent } from 'ol/extent';
 import type { Basemap } from '../../config/map';
 import { DEFAULT_BASEMAP } from '../../config/map';
 import { readZoneColors } from '../theme-colors';
@@ -28,6 +29,18 @@ export function zoneFeature(zone: ServiceZone): Feature<Polygon> {
   return new Feature<Polygon>(polygon);
 }
 
+/** Порядок слоёв на карте задаётся zIndex: зона всегда под маркерами парка. */
+export const ZONE_LAYER_Z_INDEX = 10;
+
+/** Габариты зоны в проекции карты — по ним подгоняется начальный вид, чтобы граница была видна целиком. */
+export function zoneExtent(zone: ServiceZone): Extent {
+  const geometry = zoneFeature(zone).getGeometry();
+  if (geometry === undefined) {
+    throw new Error('у зоны обслуживания нет геометрии');
+  }
+  return geometry.getExtent();
+}
+
 /** Слой зоны обслуживания: заливка и контур берутся из токенов темы. */
 export function createZoneLayer(zone: ServiceZone): VectorLayer<VectorSource<Feature<Polygon>>> {
   const colors = readZoneColors();
@@ -41,7 +54,7 @@ export function createZoneLayer(zone: ServiceZone): VectorLayer<VectorSource<Fea
   return new VectorLayer({
     source,
     style,
-    zIndex: 10,
+    zIndex: ZONE_LAYER_Z_INDEX,
   });
 }
 

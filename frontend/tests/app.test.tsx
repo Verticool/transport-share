@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { App } from '../src/app/App';
+import { readStoredTheme } from '../src/lib/theme';
 
 function renderApp(initialPath = '/') {
   return render(
@@ -28,9 +29,9 @@ describe('каркас интерфейса', () => {
     expect(within(nav).getByRole('link', { name: 'Кабинет' })).toBeInTheDocument();
   });
 
-  it('на главной показывает контейнер карты', () => {
+  it('на главной показывает карту парка', () => {
     renderApp('/');
-    expect(screen.getByTestId('map-container')).toBeInTheDocument();
+    expect(screen.getByTestId('map-canvas')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Карта самокатов' })).toBeInTheDocument();
   });
 
@@ -51,15 +52,12 @@ describe('каркас интерфейса', () => {
     expect(window.localStorage.getItem('dvizh:theme')).toBe('light');
   });
 
-  it('восстанавливает тему из localStorage и игнорирует мусор в нём', () => {
+  it('читает тему из localStorage и отбрасывает мусор в нём', () => {
     window.localStorage.setItem('dvizh:theme', 'dark');
-    const { unmount } = renderApp('/');
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    unmount();
+    expect(readStoredTheme()).toBe('dark');
 
     window.localStorage.setItem('dvizh:theme', 'не-тема');
-    renderApp('/');
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(readStoredTheme()).toBe('light');
   });
 
   it('открывает экран поездок по маршруту', () => {

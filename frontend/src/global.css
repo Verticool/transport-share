@@ -48,9 +48,10 @@
   --status-unavailable: oklch(0.6 0.02 260);
 
   /* Зона обслуживания: контур и мягкая заливка. Заливка — тот же цвет с прозрачностью,
-     поэтому вычисляется из --primary и автоматически следует за темой. */
+     поэтому вычисляется из --primary и автоматически следует за темой. Процент подобран так,
+     чтобы граница читалась на подложке, но заливка не мешала маркерам самокатов. */
   --zone-stroke: var(--primary);
-  --zone-fill: color-mix(in oklab, var(--primary) 12%, transparent);
+  --zone-fill: color-mix(in oklab, var(--primary) 16%, transparent);
 }
 
 .dark {
@@ -87,6 +88,9 @@
   --status-reserved: oklch(0.72 0.15 262);
   --status-in-ride: oklch(0.78 0.16 55);
   --status-unavailable: oklch(0.7 0.02 260);
+
+  /* На тёмной подложке тот же процент заливки выглядит ярче, поэтому здесь он ниже. */
+  --zone-fill: color-mix(in oklab, var(--primary) 12%, transparent);
 }
 
 @theme inline {
@@ -154,19 +158,38 @@
   }
 }
 
-/* Карта OpenLayers: подписи атрибуции не должны перекрывать элементы интерфейса. */
-.ol-attribution {
-  font-size: 11px;
-  background: color-mix(in oklab, var(--card) 85%, transparent) !important;
-  color: var(--muted-foreground) !important;
+/* Карта OpenLayers: только каркас раскладки, без оформления сторонней библиотеки.
+   Косметика контролов не нужна — кнопки зума и подпись источника сделаны компонентами
+   на токенах темы. Здесь остаётся то, без чего карта не работает физически. */
+.ol-viewport {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
 }
 
-.ol-attribution a {
-  color: var(--muted-foreground);
+.ol-layer {
+  position: absolute;
+  inset: 0;
 }
 
-.ol-zoom {
-  top: auto !important;
-  bottom: 1.5rem;
-  left: 1.5rem;
+.ol-selectable {
+  user-select: text;
+}
+
+.ol-unselectable {
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ol-viewport canvas {
+  display: block;
+}
+
+/* Слой интерфейса карты не должен перехватывать клики: элементы управления — наши. */
+.ol-overlaycontainer,
+.ol-overlaycontainer-stopevent {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
