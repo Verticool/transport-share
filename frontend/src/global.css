@@ -46,6 +46,11 @@
   --status-reserved: oklch(0.55 0.19 262);
   --status-in-ride: oklch(0.63 0.18 45);
   --status-unavailable: oklch(0.6 0.02 260);
+
+  /* Зона обслуживания: контур и мягкая заливка. Заливка — тот же цвет с прозрачностью,
+     поэтому вычисляется из --primary и автоматически следует за темой. */
+  --zone-stroke: var(--primary);
+  --zone-fill: color-mix(in oklab, var(--primary) 12%, transparent);
 }
 
 .dark {

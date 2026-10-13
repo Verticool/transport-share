@@ -1,0 +1,35 @@
+=== S3 · приёмка ApiClient / MockApiClient · 2026-10-13T15:40:46Z ===
+
+--- работа воркера (deleg_888e9ebc, 1159 c, 75 api_calls) НЕ ПРИНЯТА ---
+mock-client.ts читал mock/*.json через node:fs и __dirname вместо fetch, из-за чего код
+не работал бы в браузере; в тестах вернулись касты (err as ApiClientError) и assertions (!).
+Плюс мусор: воркер создавал mock/__bad_scooters__ внутри проекта. Переписано оркестратором.
+
+--- frontend: tsc ---
+exit=0
+
+--- frontend: vitest ---
+ ✓ tests/api.test.ts (9 tests) 112ms
+ ✓ tests/app.test.tsx (6 tests) 258ms
+
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+   Start at  21:40:48
+   Duration  1.30s (environment 59%, tests 18%, import 15%, setup 6%, transform 2%, worker 1%)
+
+
+--- eslint (frontend + shared) ---
+exit=0
+
+--- касты и заглушки типов (должно быть пусто) ---
+(пусто)
+
+--- shared: tsc ---
+exit=0
+
+--- браузер (тот же код на живом dev-сервере) ---
+title      : Движ — самокаты Бишкека
+header     : движ | Карта | Поездки | Кабинет | Войти
+theme      : light, body bg = oklch(0.99 0.004 150) (токен темы, не hex)
+GET /scooters.json       -> 200, 40 записей
+GET /service-zone.json   -> 200
