@@ -15,6 +15,8 @@ export interface ParkPanelProps {
   loading: boolean;
   error: string | null;
   selectedId: string | null;
+  /** Состояние приходит живым потоком: пользователь видит, что данные свежие. */
+  live?: boolean;
   onSelect: (scooterId: string) => void;
   onReload: () => void;
 }
@@ -30,6 +32,7 @@ export function ParkPanel({
   loading,
   error,
   selectedId,
+  live = false,
   onSelect,
   onReload,
 }: ParkPanelProps) {
@@ -47,7 +50,18 @@ export function ParkPanel({
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
       <CardHeader>
-        <CardTitle>Парк</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          Парк
+          {live && (
+            <span
+              className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground"
+              data-testid="live-indicator"
+            >
+              <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+              в эфире
+            </span>
+          )}
+        </CardTitle>
         <CardDescription>
           {loading
             ? 'Загружаем самокаты…'

@@ -16,7 +16,8 @@ const EnvSchema = z.object({
     .default('postgres://sharing:sharing@localhost:5433/sharing'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   /** Каталог с мок-данными: из них наполняется база (сид). */
-  MOCK_DIR: z.string().min(1).default('../mock'),
+  // Путь к мок-данным: абсолютный либо относительный к корню репозитория (см. db/mock-dir.ts).
+  MOCK_DIR: z.string().min(1).default('mock'),
   /** Секрет подписи токенов доступа. В проде обязателен свой — иначе значения по умолчанию не хватит. */
   ACCESS_TOKEN_SECRET: z.string().min(16).default('dev-access-secret-please-change'),
   ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(120),

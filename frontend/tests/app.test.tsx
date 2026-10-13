@@ -24,7 +24,7 @@ function signInDemoUser(): void {
   if (user === undefined) {
     throw new Error('в мок-данных нет пользователя');
   }
-  useSessionStore.getState().signIn({ token: 'tk-test', user });
+  useSessionStore.getState().signIn({ token: 'tk-test', refreshToken: 'rt-test', user });
 }
 
 describe('каркас интерфейса', () => {

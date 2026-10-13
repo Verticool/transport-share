@@ -57,10 +57,21 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
   const [error, setError] = useState<string | null>(null);
   // Счётчик запросов: позволяет перезапросить состояние снаружи (например, после старта поездки).
   const [attempt, setAttempt] = useState(0);
+  // Подпись последнего принятого снимка: одинаковые ответы не должны менять состояние.
+  const snapshotKey = useRef('init');
 
   const applySnapshot = useCallback(
     (snapshot: { booking: Booking; serverTime: string } | null): void => {
-      setBooking(snapshot?.booking ?? null);
+      // Один и тот же снимок не должен менять состояние: иначе опрос раз в секунду давал бы
+      // новый объект брони на каждый ответ, а на нём завязаны эффекты (проверено вживую).
+      const key =
+        snapshot === null
+          ? 'none'
+          : `${snapshot.booking.id}|${snapshot.booking.status}|${snapshot.booking.expiresAt}`;
+      if (snapshotKey.current !== key) {
+        snapshotKey.current = key;
+        setBooking(snapshot?.booking ?? null);
+      }
       if (snapshot !== null) {
         setSkewMs(Date.parse(snapshot.serverTime) - now());
       }
@@ -154,6 +165,13 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
     }
   }, [applySnapshot, booking, token]);
 
+  // Перезапрос — счётчиком попыток, а не новой функцией: снаружи (карта, панель) на эту функцию
+  // подписаны эффекты, и нестабильная ссылка превращала бы любое событие в бесконечный цикл
+  // запросов (проверено вживую: 930 запросов за 5 секунд).
+  const requestRefresh = useCallback((): void => {
+    setAttempt((value) => value + 1);
+  }, []);
+
   return {
     booking,
     remainingMs,
@@ -162,8 +180,6 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
     error,
     book,
     cancel,
-    refresh: () => {
-      setAttempt((value) => value + 1);
-    },
+    refresh: requestRefresh,
   };
 }

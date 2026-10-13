@@ -377,6 +377,47 @@ suite('бронь', () => {
     expect(active.booking).toBeNull();
   });
 
+  it('снятие брони с пустым телом и типом содержимого: ошибка клиента, а не отказ сервера', async () => {
+    await resetData();
+    const { token } = await signIn();
+    const scooter = await freeScooter();
+    const created = await bundle.app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      payload: { scooterId: scooter.id },
+      headers: authHeader(token),
+    });
+    const booking = BookingResponseSchema.parse(created.json());
+
+    // Так запрос уходил из интерфейса: без тела, но с `content-type: application/json`.
+    // Сервер отвечал 500 «внутренняя ошибка» — деньги и бронь оставались нетронутыми, а клиент
+    // не понимал причины. Правильный ответ — отказ по запросу (400), а не отказ сервера.
+    const malformed = await bundle.app.inject({
+      method: 'DELETE',
+      url: `/api/bookings/${booking.booking.id}`,
+      headers: { ...authHeader(token), 'content-type': 'application/json' },
+      payload: '',
+    });
+    expect(malformed.statusCode).not.toBe(500);
+    expect(malformed.statusCode).toBeLessThan(500);
+
+    // И тот же запрос без лишнего заголовка действительно снимает бронь.
+    const proper = await bundle.app.inject({
+      method: 'DELETE',
+      url: `/api/bookings/${booking.booking.id}`,
+      headers: authHeader(token),
+    });
+    expect(proper.statusCode).toBe(204);
+
+    const active = ActiveBookingSchema.parse(
+      (await bundle.app.inject({ method: 'GET', url: '/api/bookings/active', headers: authHeader(token) })).json(),
+    );
+    expect(active.booking).toBeNull();
+
+    const park = ParkSchema.parse((await bundle.app.inject({ method: 'GET', url: '/api/scooters' })).json());
+    expect(park.scooters.find((item) => item.id === scooter.id)?.status).toBe('free');
+  });
+
   it('снимает бронь по сроку и возвращает самокат в парк', async () => {
     await resetData();
     const { token } = await signIn();

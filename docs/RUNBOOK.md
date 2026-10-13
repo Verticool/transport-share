@@ -39,12 +39,24 @@ npm install                    # workspaces: shared, frontend, backend
 docker compose up -d db        # только БД (или свой локальный PostgreSQL 17)
 cp .env.example .env
 npm run migrate -w backend && npm run seed -w backend
-npm run dev -w backend         # Fastify на :3000
-npm run dev -w frontend        # Vite на :5173, /api и /ws проксируются на :3000
+npm run dev -w backend         # Fastify на :8080
+VITE_API_MODE=http npm run dev -w frontend   # Vite на :5173, /api и /ws проксируются на :8080
 ```
 
-Фронт можно поднять вообще без бэкенда: `VITE_API_MODE=mock` — данные берутся из `mock/*.json`,
-это режим стадий S2–S7 (фронт закрыт и доказуем без сервера).
+Фронт можно поднять вообще без бэкенда: без `VITE_API_MODE` (или `VITE_API_MODE=mock`) данные
+берутся из `mock/*.json`, а состояние «сервера» живёт в памяти вкладки — это режим стадий S2–S7,
+он остаётся для быстрого показа интерфейса.
+
+Сквозные проверки по реальному стеку (фронт + сервер + база) — отдельный конфиг: он сам поднимает
+сервер и Vite на :5174, а перед прогоном приводит базу к исходному состоянию.
+
+```bash
+TEST_DATABASE_URL=postgres://sharing:sharing@localhost:5433/sharing \
+  npx playwright test --config=playwright.live.config.ts -w frontend
+```
+
+Сброс состояния тестовой базы вручную: `DATABASE_URL=... npm run db:reset-test -w backend`
+(скрипт очищает таблицы и наполняет их заново; на рабочей базе не запускать).
 
 ## 4. Проверка работоспособности (доказуемость)
 

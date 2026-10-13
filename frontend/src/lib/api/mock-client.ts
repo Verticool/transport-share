@@ -668,16 +668,25 @@ export class MockApiClient implements ApiClient {
     }
 
     const token = `tk-${user.id}-${this.state.now()}`;
+    // Разделение «доступ/обновление» есть и здесь: интерфейс не должен знать, где мок, а где сервер.
+    const refreshToken = `rt-${user.id}-${this.state.now()}`;
     this.state.tokens.set(token, user.id);
+    this.state.tokens.set(refreshToken, user.id);
     this.state.emailByUser.set(user.id, user.email);
 
-    return { user, token };
+    return { user, token, refreshToken };
   }
 
   async logout(token: string): Promise<void> {
     await this.applyDelay();
     this.state.tokens.delete(token);
     this.state.revoked.add(token);
+    for (const known of [...this.state.tokens.keys()]) {
+      if (known.startsWith('rt-')) {
+        this.state.tokens.delete(known);
+        this.state.revoked.add(known);
+      }
+    }
   }
 
   async getMe(token: string): Promise<PublicUser> {

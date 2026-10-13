@@ -36,7 +36,7 @@ export function tokenFor(user: PublicUser): string {
 /** Кладёт сессию в стор: хуки берут токен оттуда, как в приложении. */
 export function signInAs(user: PublicUser): string {
   const token = tokenFor(user);
-  useSessionStore.getState().signIn({ token, user });
+  useSessionStore.getState().signIn({ token, refreshToken: `rt-${user.id}`, user });
   return token;
 }
 

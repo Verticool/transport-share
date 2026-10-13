@@ -22,7 +22,8 @@ try {
     'TRUNCATE ride_points, ride_events, ride_pauses, invoices, emails, rides, bookings, sessions, scooters, users CASCADE',
   );
   const { seed } = await import('../src/db/seed.ts');
-  await seed(pool, process.env['MOCK_DIR'] ?? '../mock');
+  const { resolveMockDir } = await import('../src/db/mock-dir.ts');
+  await seed(pool, resolveMockDir(process.env['MOCK_DIR'] ?? 'mock'));
 
   const login = await app.inject({
     method: 'POST',

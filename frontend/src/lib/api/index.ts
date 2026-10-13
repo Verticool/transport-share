@@ -1,7 +1,9 @@
+import { HttpApiClient } from './http-client';
 import { MockApiClient } from './mock-client';
 import type { ApiClient } from './types';
 
 export { ApiClientError } from './types';
+export { HttpApiClient } from './http-client';
 export type {
   ApiClient,
   ApiErrorCode,
@@ -14,20 +16,31 @@ export type {
 } from './types';
 
 /**
+ * Режим источника данных.
+ *
+ * `mock` — статика из `mock/*.json` и «сервер» в памяти вкладки: так интерфейс проверялся до
+ * появления бэкенда. `http` — настоящий сервер (S11). Переключается переменной окружения, поэтому
+ * экраны работают и с моками, и с сервером без правок.
+ */
+export type ApiMode = 'mock' | 'http';
+
+export function readApiMode(): ApiMode {
+  // Доступ через скобки: `import.meta.env` описан как словарь, а прямой доступ к полю запрещён
+  // настройкой `noPropertyAccessFromIndexSignature`.
+  const raw: unknown = import.meta.env['VITE_API_MODE'];
+  return raw === 'http' ? 'http' : 'mock';
+}
+
+/**
  * Клиент данных интерфейса.
  *
- * На стадиях S3–S10 источник — мок-данные: тот же интерфейс `ApiClient`, но ответы приходят
- * статикой. Когда появится бэкенд (S11), здесь появится выбор режима (`VITE_API_MODE`),
- * а компоненты останутся без правок — они знают только интерфейс.
- *
- * Экземпляр один на приложение: мок-клиент играет роль сервера, а сервер один. Иначе разные
- * экраны видели бы разные состояния — например, бронь, оформленная в одном месте, была бы не видна
- * в другом.
+ * Экземпляр один на приложение: иначе разные экраны видели бы разные сессии и состояния —
+ * например, бронь, оформленная на карте, была бы не видна в кабинете.
  */
 let sharedClient: ApiClient | null = null;
 
-export function createApiClient(): ApiClient {
-  sharedClient ??= new MockApiClient();
+export function createApiClient(mode: ApiMode = readApiMode()): ApiClient {
+  sharedClient ??= mode === 'http' ? new HttpApiClient() : new MockApiClient();
   return sharedClient;
 }
 

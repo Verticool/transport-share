@@ -1,8 +1,8 @@
 [
   {
-    "id": "096e5c84-095e-4e54-b1d4-37b4b3dffdb7",
-    "rideId": "d57a096e-5c84-495e-be54-b1d437b4b3df",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "836b4c9b-c35e-4b6b-856d-0c11ffa98ecc",
+    "rideId": "62f5ab17-8e56-4ac3-8e2d-d4a572d54401",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 7900,
     "currency": "KGS",
     "breakdown": {
@@ -17,9 +17,9 @@
     "createdAt": "2026-10-13T11:34:12.975Z"
   },
   {
-    "id": "095e3e54-b1d4-47b4-b3df-fdb736fd10e0",
-    "rideId": "5c84095e-3e54-41d4-b7b4-b3dffdb736fd",
-    "userId": "f1aa0773-afa4-41f6-8478-f10c93695d31",
+    "id": "24ce7c82-b3ee-43b8-8665-fdd8476a7246",
+    "rideId": "80e5db48-1f0b-41ef-ac9e-599ff7be1af7",
+    "userId": "6222fb27-e4cc-46a3-808a-3146438af7a2",
     "amount": 11500,
     "currency": "KGS",
     "breakdown": {
@@ -34,9 +34,9 @@
     "createdAt": "2026-10-13T10:17:58.385Z"
   },
   {
-    "id": "b1d437b4-b3df-4db7-b6fd-10e05cf3e1b9",
-    "rideId": "3e54b1d4-37b4-43df-bdb7-36fd10e05cf3",
-    "userId": "0773afa4-51f6-4478-b10c-93695d316b2c",
+    "id": "4753af8d-34b6-4802-9159-ce10e9d5be9e",
+    "rideId": "58eb7c10-ac98-479d-b7b1-448bbcb69d29",
+    "userId": "13dfcad3-c68f-4da0-8f1d-b1b3f59c424a",
     "amount": 15700,
     "currency": "KGS",
     "breakdown": {
@@ -51,9 +51,9 @@
     "createdAt": "2026-10-13T09:44:44.723Z"
   },
   {
-    "id": "b3dffdb7-36fd-40e0-9cf3-e1b90da5baa6",
-    "rideId": "37b4b3df-fdb7-46fd-90e0-5cf3e1b90da5",
-    "userId": "f1aa0773-afa4-41f6-8478-f10c93695d31",
+    "id": "1c261069-b8fa-462d-98bb-282403389a60",
+    "rideId": "a54e94f5-0e10-4a01-9ff2-ce2da627debe",
+    "userId": "6222fb27-e4cc-46a3-808a-3146438af7a2",
     "amount": 25700,
     "currency": "KGS",
     "breakdown": {
@@ -68,9 +68,9 @@
     "createdAt": "2026-10-13T09:08:17.602Z"
   },
   {
-    "id": "36fd10e0-5cf3-41b9-8da5-baa64139bfeb",
-    "rideId": "fdb736fd-10e0-4cf3-a1b9-0da5baa64139",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "c51c0282-69af-4a68-a679-500d2936775e",
+    "rideId": "f1afa20d-d8d7-4fd5-8aa2-eb6dce55bee7",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 11900,
     "currency": "KGS",
     "breakdown": {
@@ -85,9 +85,9 @@
     "createdAt": "2026-10-13T07:45:40.767Z"
   },
   {
-    "id": "5cf3e1b9-0da5-4aa6-8139-bfebfbc7bed6",
-    "rideId": "10e05cf3-e1b9-4da5-baa6-4139bfebfbc7",
-    "userId": "73afa451-f6c4-48f1-8c93-695d316b2c82",
+    "id": "76a0fc40-d01c-4fd1-939b-a4a9d45521c3",
+    "rideId": "9fd45a4f-20b3-4c0e-89bd-88bdf9563d52",
+    "userId": "649e7423-c298-4475-916d-99d0c8dc1f1c",
     "amount": 15100,
     "currency": "KGS",
     "breakdown": {
@@ -102,9 +102,9 @@
     "createdAt": "2026-10-13T06:50:37.060Z"
   },
   {
-    "id": "0da5baa6-4139-4feb-bbc7-bed6fd330d23",
-    "rideId": "e1b90da5-baa6-4139-bfeb-fbc7bed6fd33",
-    "userId": "f1aa0773-afa4-41f6-8478-f10c93695d31",
+    "id": "c402f55f-fd40-4718-8f2c-d08949d036d8",
+    "rideId": "48bcca84-8ce3-4013-8164-c3ee994a7d41",
+    "userId": "6222fb27-e4cc-46a3-808a-3146438af7a2",
     "amount": 16900,
     "currency": "KGS",
     "breakdown": {
@@ -119,9 +119,9 @@
     "createdAt": "2026-10-13T05:25:06.662Z"
   },
   {
-    "id": "4139bfeb-fbc7-4ed6-bd33-0d234ed01773",
-    "rideId": "baa64139-bfeb-4bc7-bed6-fd330d234ed0",
-    "userId": "73afa451-f6c4-48f1-8c93-695d316b2c82",
+    "id": "45b76431-7c33-4cee-b53f-508b56084d94",
+    "rideId": "b3d97146-0e3f-4eda-bfdf-5c94129b9c68",
+    "userId": "649e7423-c298-4475-916d-99d0c8dc1f1c",
     "amount": 13900,
     "currency": "KGS",
     "breakdown": {
@@ -136,9 +136,9 @@
     "createdAt": "2026-10-13T04:37:42.570Z"
   },
   {
-    "id": "fbc7bed6-fd33-4d23-8ed0-1773eefc105d",
-    "rideId": "bfebfbc7-bed6-4d33-8d23-4ed01773eefc",
-    "userId": "f1aa0773-afa4-41f6-8478-f10c93695d31",
+    "id": "78adc34a-5dc6-4d0d-8a11-224f290d25f2",
+    "rideId": "3ccab79f-5588-4b84-805a-76f48c55d36c",
+    "userId": "6222fb27-e4cc-46a3-808a-3146438af7a2",
     "amount": 9700,
     "currency": "KGS",
     "breakdown": {
@@ -153,9 +153,9 @@
     "createdAt": "2026-10-13T03:21:41.317Z"
   },
   {
-    "id": "fd330d23-4ed0-4773-aefc-105d6a9b6525",
-    "rideId": "bed6fd33-0d23-4ed0-9773-eefc105d6a9b",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "5c9dd302-2b13-453f-88af-38341f16415a",
+    "rideId": "84376e41-795b-42f0-8779-54c5eb3b75cc",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 25900,
     "currency": "KGS",
     "breakdown": {
@@ -170,9 +170,9 @@
     "createdAt": "2026-10-13T02:48:10.764Z"
   },
   {
-    "id": "4ed01773-eefc-405d-aa9b-6525fa0f4c75",
-    "rideId": "0d234ed0-1773-4efc-905d-6a9b6525fa0f",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "4b2b0fc7-e7c2-4f76-8a77-7205026d6c96",
+    "rideId": "03fbdfd6-10f1-496b-82ff-1f8377bbfdf3",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 15100,
     "currency": "KGS",
     "breakdown": {
@@ -187,9 +187,9 @@
     "createdAt": "2026-10-13T01:29:52.260Z"
   },
   {
-    "id": "eefc105d-6a9b-4525-ba0f-4c7556a0aab5",
-    "rideId": "1773eefc-105d-4a9b-a525-fa0f4c7556a0",
-    "userId": "0773afa4-51f6-4478-b10c-93695d316b2c",
+    "id": "16b9aab2-5903-414d-9856-f03272aa2756",
+    "rideId": "2fb71cbd-5c5d-4847-bead-3991c266f7e9",
+    "userId": "13dfcad3-c68f-4da0-8f1d-b1b3f59c424a",
     "amount": 14500,
     "currency": "KGS",
     "breakdown": {
@@ -204,9 +204,9 @@
     "createdAt": "2026-10-13T00:22:42.285Z"
   },
   {
-    "id": "6a9b6525-fa0f-4c75-96a0-aab59b8553d1",
-    "rideId": "105d6a9b-6525-4a0f-8c75-56a0aab59b85",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "ef99b594-663c-4d6d-b090-5198c73ad6cd",
+    "rideId": "c0838642-7d57-4f8b-8691-d0dba75c0b30",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 24700,
     "currency": "KGS",
     "breakdown": {
@@ -221,9 +221,9 @@
     "createdAt": "2026-10-12T23:42:29.096Z"
   },
   {
-    "id": "fa0f4c75-56a0-4ab5-9b85-53d1a9b1ded4",
-    "rideId": "6525fa0f-4c75-46a0-aab5-9b8553d1a9b1",
-    "userId": "aa0773af-a451-46c4-b8f1-0c93695d316b",
+    "id": "f14057be-7484-4cb9-b999-4eaf2220d550",
+    "rideId": "cad2e059-bb19-41be-99fd-567177ffed6b",
+    "userId": "205fd01b-b513-4b84-a48b-123c77249e63",
     "amount": 14500,
     "currency": "KGS",
     "breakdown": {
@@ -238,9 +238,9 @@
     "createdAt": "2026-10-12T22:31:00.250Z"
   },
   {
-    "id": "56a0aab5-9b85-43d1-a9b1-ded44aa3b3a5",
-    "rideId": "4c7556a0-aab5-4b85-93d1-a9b1ded44aa3",
-    "userId": "f1aa0773-afa4-41f6-8478-f10c93695d31",
+    "id": "1bcd70b3-bc32-4ae9-b66e-6c59031240d5",
+    "rideId": "1b915cd4-ff1f-4e0b-82ee-7743f7be1c23",
+    "userId": "6222fb27-e4cc-46a3-808a-3146438af7a2",
     "amount": 21100,
     "currency": "KGS",
     "breakdown": {
@@ -255,9 +255,9 @@
     "createdAt": "2026-10-12T21:42:49.057Z"
   },
   {
-    "id": "9b8553d1-a9b1-4ed4-8aa3-b3a58fbe1353",
-    "rideId": "aab59b85-53d1-49b1-9ed4-4aa3b3a58fbe",
-    "userId": "73afa451-f6c4-48f1-8c93-695d316b2c82",
+    "id": "c24aeae8-ce27-4305-ac59-0bcfc71d32e4",
+    "rideId": "9e7fee6e-9a77-4f69-85be-0eb123bb2cf6",
+    "userId": "649e7423-c298-4475-916d-99d0c8dc1f1c",
     "amount": 11100,
     "currency": "KGS",
     "breakdown": {
@@ -272,9 +272,9 @@
     "createdAt": "2026-10-12T20:40:18.437Z"
   },
   {
-    "id": "a9b1ded4-4aa3-43a5-8fbe-1353932d1c92",
-    "rideId": "53d1a9b1-ded4-4aa3-b3a5-8fbe1353932d",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "73bd7c0a-bec0-4ae9-b28e-797af68c842d",
+    "rideId": "322ab9ae-8ce6-4672-8b86-db3b3f38ba57",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 7900,
     "currency": "KGS",
     "breakdown": {
@@ -289,9 +289,9 @@
     "createdAt": "2026-10-12T19:18:50.183Z"
   },
   {
-    "id": "4aa3b3a5-8fbe-4353-932d-1c92d39bac36",
-    "rideId": "ded44aa3-b3a5-4fbe-9353-932d1c92d39b",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "9fc7f7a5-3671-46a6-8b64-3235aecb3fc6",
+    "rideId": "fa38a5fe-62ae-49ac-8e1a-e15b3df21580",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 26500,
     "currency": "KGS",
     "breakdown": {
@@ -306,9 +306,9 @@
     "createdAt": "2026-10-12T18:50:50.251Z"
   },
   {
-    "id": "8fbe1353-932d-4c92-939b-ac3607a5bda0",
-    "rideId": "b3a58fbe-1353-432d-9c92-d39bac3607a5",
-    "userId": "73afa451-f6c4-48f1-8c93-695d316b2c82",
+    "id": "f62ac296-7233-4cf2-b949-5468372dba0f",
+    "rideId": "ab168f04-b7d0-4cc5-83aa-ba65b719072f",
+    "userId": "649e7423-c298-4475-916d-99d0c8dc1f1c",
     "amount": 7300,
     "currency": "KGS",
     "breakdown": {
@@ -323,9 +323,9 @@
     "createdAt": "2026-10-12T17:16:01.096Z"
   },
   {
-    "id": "932d1c92-d39b-4c36-87a5-bda04994946b",
-    "rideId": "1353932d-1c92-439b-ac36-07a5bda04994",
-    "userId": "afa451f6-c478-410c-9369-5d316b2c82c3",
+    "id": "8d151be5-1b2a-4612-828a-a986b5f57cce",
+    "rideId": "128dfba3-7392-413d-a057-eebcf3d93d35",
+    "userId": "9a0e3f7b-551a-44d9-ba9f-519103b6fc70",
     "amount": 10300,
     "currency": "KGS",
     "breakdown": {
@@ -340,9 +340,9 @@
     "createdAt": "2026-10-12T16:28:13.968Z"
   },
   {
-    "id": "d39bac36-07a5-4da0-8994-946b8d0b50c7",
-    "rideId": "1c92d39b-ac36-47a5-bda0-4994946b8d0b",
-    "userId": "73afa451-f6c4-48f1-8c93-695d316b2c82",
+    "id": "82b7904a-e3e4-45a3-ae0d-4d0caddd2cac",
+    "rideId": "e8031ff9-a350-46db-b021-27a9fc5d6848",
+    "userId": "649e7423-c298-4475-916d-99d0c8dc1f1c",
     "amount": 12100,
     "currency": "KGS",
     "breakdown": {
@@ -357,9 +357,9 @@
     "createdAt": "2026-10-12T15:33:43.655Z"
   },
   {
-    "id": "07a5bda0-4994-446b-8d0b-50c7e7e03d28",
-    "rideId": "ac3607a5-bda0-4994-946b-8d0b50c7e7e0",
-    "userId": "f1aa0773-afa4-41f6-8478-f10c93695d31",
+    "id": "831066f2-7ca5-495e-b8b7-9657144f1605",
+    "rideId": "85b1499f-2a84-4e7e-8b7d-11c7d4c409c4",
+    "userId": "6222fb27-e4cc-46a3-808a-3146438af7a2",
     "amount": 6700,
     "currency": "KGS",
     "breakdown": {
@@ -374,9 +374,9 @@
     "createdAt": "2026-10-12T14:11:48.648Z"
   },
   {
-    "id": "4994946b-8d0b-40c7-a7e0-3d282733b386",
-    "rideId": "bda04994-946b-4d0b-90c7-e7e03d282733",
-    "userId": "73afa451-f6c4-48f1-8c93-695d316b2c82",
+    "id": "386a00b4-135a-45d7-b6bd-2c09c67c135a",
+    "rideId": "43011ca6-a279-4b48-b2f9-6c3cdcaac8ba",
+    "userId": "649e7423-c298-4475-916d-99d0c8dc1f1c",
     "amount": 23500,
     "currency": "KGS",
     "breakdown": {
@@ -391,9 +391,9 @@
     "createdAt": "2026-10-12T14:04:31.206Z"
   },
   {
-    "id": "8d0b50c7-e7e0-4d28-a733-b3866ad4d437",
-    "rideId": "946b8d0b-50c7-47e0-bd28-2733b3866ad4",
-    "userId": "9af1aa07-73af-4451-b6c4-78f10c93695d",
+    "id": "808489f1-1929-402b-8311-befe2ba47d21",
+    "rideId": "a2884c4b-c020-4f56-9ed3-4e8f0b21476c",
+    "userId": "0fd47469-a473-4d18-9298-385756e781f5",
     "amount": 7300,
     "currency": "KGS",
     "breakdown": {
@@ -408,9 +408,9 @@
     "createdAt": "2026-10-12T12:14:40.771Z"
   },
   {
-    "id": "e7e03d28-2733-4386-aad4-d43788e6347d",
-    "rideId": "50c7e7e0-3d28-4733-b386-6ad4d43788e6",
-    "userId": "f1aa0773-afa4-41f6-8478-f10c93695d31",
+    "id": "efc05e4b-57a7-45c9-aee3-e6c6da31f896",
+    "rideId": "b5c93d99-bed7-43fc-ac76-bdf50d58ab3c",
+    "userId": "6222fb27-e4cc-46a3-808a-3146438af7a2",
     "amount": 22700,
     "currency": "KGS",
     "breakdown": {

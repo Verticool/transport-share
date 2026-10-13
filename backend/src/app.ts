@@ -103,10 +103,20 @@ export function buildApp(options: BuildAppOptions): AppBundle {
     }
 
     // Ошибка разбора запроса приходит не от нашего сервиса: тип у неё внешний, поэтому проверяем
-    // форму (наличие `validation`), а не тип.
-    const parsed = z.object({ validation: z.unknown().optional() }).safeParse(error);
-    if (parsed.success && parsed.data.validation !== undefined) {
-      return reply.code(400).send({ code: 'invalid_payload', message: 'Неверный запрос' });
+    // форму, а не тип. Пустое тело с `content-type: application/json` тоже сюда попадает — это
+    // ошибка клиента (400), а не отказ сервера, и клиент должен увидеть причину, а не «500».
+    const parsed = z
+      .object({ validation: z.unknown().optional(), statusCode: z.number().optional() })
+      .safeParse(error);
+    if (parsed.success) {
+      const clientFault =
+        parsed.data.validation !== undefined ||
+        (parsed.data.statusCode !== undefined &&
+          parsed.data.statusCode >= 400 &&
+          parsed.data.statusCode < 500);
+      if (clientFault) {
+        return reply.code(400).send({ code: 'invalid_payload', message: 'Неверный запрос' });
+      }
     }
 
     request.log.error({ err: error }, 'необработанная ошибка');

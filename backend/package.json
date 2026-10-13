@@ -12,7 +12,8 @@
     "migrate": "tsx src/db/migrate-cli.ts",
     "seed": "tsx src/db/seed-cli.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:reset-test": "tsx scripts/reset-test-db.ts"
   },
   "dependencies": {
     "@sharing/shared": "*",

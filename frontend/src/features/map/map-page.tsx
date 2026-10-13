@@ -20,7 +20,7 @@ import { useSessionStore } from '../../stores/session';
  * одним срезом, поэтому карта, список и панель всегда согласованы.
  */
 export function MapPage() {
-  const { scooters, loading, error, reload } = usePark();
+  const { scooters, loading, error, live, changeTick, reload } = usePark();
   const {
     booking,
     remainingMs,
@@ -63,6 +63,15 @@ export function MapPage() {
       reload();
     }
   }, [booking, ride.ride, reload]);
+
+  // События потока (бронь оформлена, поездка началась или закрылась) приходят от сервера:
+  // по ним перезапрашиваем своё состояние, а не ждём следующего действия пользователя.
+  useEffect(() => {
+    if (changeTick === 0) {
+      return;
+    }
+    refreshBooking();
+  }, [changeTick, refreshBooking]);
 
   const selected = scooters.find((scooter) => scooter.id === selectedId) ?? null;
   const bookedScooter =
@@ -143,6 +152,7 @@ export function MapPage() {
           loading={loading}
           error={error}
           selectedId={selectedId}
+          live={live}
           onSelect={setSelectedId}
           onReload={reload}
         />

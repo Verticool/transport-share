@@ -1,7 +1,5 @@
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { readEnv } from '../config/env';
+import { resolveMockDir } from './mock-dir';
 import { createPool } from './pool';
 import { seed } from './seed';
 
@@ -9,9 +7,8 @@ import { seed } from './seed';
  * Наполнение базы мок-данными: `npm run seed`.
  * В docker-compose вызывается одноразовым сервисом после миграций; повторный запуск безопасен.
  */
-const here = dirname(fileURLToPath(import.meta.url));
 const env = readEnv();
-const mockDir = resolve(join(here, '..', '..'), env.MOCK_DIR);
+const mockDir = resolveMockDir(env.MOCK_DIR);
 
 const pool = createPool(env);
 

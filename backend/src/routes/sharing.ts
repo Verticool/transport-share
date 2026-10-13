@@ -6,8 +6,9 @@ import { z } from 'zod';
 import { invalidPayload, notFound } from '../http/errors';
 import { requireBearerToken } from '../http/context';
 import { listInvoiceRowsForUser, listEmailRowsForUser } from '../repo/invoices';
+import { findScooterRow } from '../repo/scooters';
 import { listRideRowsForUser } from '../repo/rides';
-import { toEmailMessage, toInvoice, toRide } from '../repo/rows';
+import { toEmailMessage, toInvoice, toRide, toScooter } from '../repo/rows';
 import type { AuthService } from '../auth/service';
 import type { WsHub } from '../ws/hub';
 import type { BookingService } from '../services/booking-service';
@@ -38,6 +39,31 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
 
   const serverTime = (): string => new Date(now()).toISOString();
 
+  /**
+   * Сообщает всем подписчикам, что самокат сменил состояние.
+   *
+   * Бронь и старт поездки меняют статус самоката — без этого сообщения второй клиент узнал бы о
+   * брони только при следующем изменении парка. Так требование «состояние меняется у всех сразу»
+   * выполняется не по случайности, а всегда.
+   */
+  const announceScooter = async (scooterId: string): Promise<void> => {
+    const row = await findScooterRow(pool, scooterId);
+    if (row === null) {
+      return;
+    }
+    const scooter = toScooter(row);
+    hub.broadcastParkDelta([
+      {
+        id: scooter.id,
+        status: scooter.status,
+        batteryPct: scooter.batteryPct,
+        lat: scooter.lat,
+        lng: scooter.lng,
+        lastSeenAt: scooter.lastSeenAt,
+      },
+    ]);
+  };
+
   // ── Брони ───────────────────────────────────────────────────────────────────────────────────
   app.get('/api/bookings/active', async (request, reply) => {
     const user = await auth.userByAccessToken(requireBearerToken(request));
@@ -55,6 +81,7 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
     const booking = await bookings.create(parsed.data.scooterId, user.id);
     // О брони сообщаем всем: состояние самоката изменилось у всех, кто смотрит карту.
     hub.broadcastBookingCreated(user.id, booking);
+    await announceScooter(booking.scooterId);
     return reply.code(201).send({ booking, serverTime: serverTime() });
   });
 
@@ -65,7 +92,17 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
       throw notFound('Бронь не найдена');
     }
 
+    const before = await pool.query<{ scooter_id: string }>(
+      "SELECT scooter_id FROM bookings WHERE id = $1 AND status = 'active'",
+      [parsed.data.id],
+    );
     await bookings.cancel(parsed.data.id, user.id);
+
+    const scooterId = before.rows[0]?.scooter_id;
+    if (scooterId !== undefined) {
+      // Самокат вернулся в парк: об этом должны узнать все, кто смотрит карту.
+      await announceScooter(scooterId);
+    }
     return reply.code(204).send();
   });
 
@@ -91,6 +128,7 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
 
     const snapshot = await rides.start(parsed.data.bookingId, user.id);
     hub.broadcastRideStarted(user.id, snapshot.ride);
+    await announceScooter(snapshot.ride.scooterId);
     return reply.code(201).send(snapshot);
   });
 
@@ -123,6 +161,8 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
 
     const result = await rides.finish(parsed.data.id, user.id);
     hub.broadcastRideFinished(user.id, result.ride, result.invoice, result.serverTime);
+    // Поездка закрыта: самокат снова свободен (или уходит в недоступные по заряду).
+    await announceScooter(result.ride.scooterId);
     return reply.code(200).send(result);
   });
 
