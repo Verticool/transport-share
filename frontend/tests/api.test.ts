@@ -1,32 +1,16 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ScooterSchema, ServiceZoneSchema } from '@sharing/shared';
 
 import { ApiClientError } from '../src/lib/api/types';
 import { MockApiClient } from '../src/lib/api/mock-client';
+import { readMockFile, stubFetch } from './helpers/mock-files';
 
 /**
  * Тесты клиента данных проверяют две вещи сразу: что отдаёт наша статика (файл читается как есть)
  * и как клиент ведёт себя при сбоях — обрыв сети, 404, ответ, не проходящий схему.
- *
- * Путь считается от рабочего каталога vitest (это корень фронтенда) — в jsdom `import.meta.url`
- * не является file-ссылкой, поэтому `fileURLToPath` там не работает.
+ * Работа с файлами моков и подмена сети — в `helpers/mock-files.ts`, общем для тестов данных.
  */
-const mockDir = resolve(process.cwd(), '../mock');
 const fast = { minDelayMs: 0, maxDelayMs: 0 };
-
-function readMockFile(name: string): string {
-  return readFileSync(`${mockDir}/${name}`, 'utf-8');
-}
-
-/** Подменяет сеть одним ответом: код клиента работает с настоящим Response, а не с заглушкой. */
-function stubFetch(body: string, status = 200): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() => Promise.resolve(new Response(body, { status }))),
-  );
-}
 
 afterEach(() => {
   vi.unstubAllGlobals();

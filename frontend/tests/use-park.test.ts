@@ -13,6 +13,11 @@ function makeClient(getPark: ApiClient['getPark']): ApiClient {
   return {
     getZone: () => Promise.resolve(SERVICE_ZONE),
     getPark,
+    // Хук парка бронь не трогает, но интерфейс требует эти методы: заглушки честно сообщают,
+    // что вызов пришёл не по адресу, а не молча возвращают пустоту.
+    getActiveBooking: () => Promise.reject(new Error('usePark не запрашивает бронь')),
+    createBooking: () => Promise.reject(new Error('usePark не создаёт бронь')),
+    cancelBooking: () => Promise.reject(new Error('usePark не отменяет бронь')),
   };
 }
 
