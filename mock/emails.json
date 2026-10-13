@@ -1,0 +1,252 @@
+[
+  {
+    "id": "6e5c8409-4e9c3e-54b1-d437b4b3dffdb736",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "toEmail": "alan@example.com",
+    "subject": "Счёт за поездку SC-003",
+    "body": "Спасибо за поездку! Итого: 157.00 сом. Время в пути: 22 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:d57a096e-45ba84-095e-3e54b1d437b4b3df",
+    "createdAt": "2026-10-13T11:25:30.643Z",
+    "sentAt": "2026-10-13T11:25:31.643Z"
+  },
+  {
+    "id": "5e3e54b1-4ebe37-b4b3-dffdb736fd10e05c",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "toEmail": "demo@sharing.kg",
+    "subject": "Счёт за поездку SC-018",
+    "body": "Спасибо за поездку! Итого: 197.00 сом. Время в пути: 28 мин, паузы: 2 мин.",
+    "dedupeKey": "invoice:5c84095e-4c8454-b1d4-37b4b3dffdb736fd",
+    "createdAt": "2026-10-13T10:35:59.250Z",
+    "sentAt": "2026-10-13T10:36:00.250Z"
+  },
+  {
+    "id": "d437b4b3-44b7fd-b736-fd10e05cf3e1b90d",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "toEmail": "demo@sharing.kg",
+    "subject": "Счёт за поездку SC-008",
+    "body": "Спасибо за поездку! Итого: 259.00 сом. Время в пути: 39 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:3e54b1d4-4e94b4-b3df-fdb736fd10e05cf3",
+    "createdAt": "2026-10-13T09:59:31.044Z",
+    "sentAt": "2026-10-13T09:59:32.044Z"
+  },
+  {
+    "id": "dffdb736-4fbd10-e05c-f3e1b90da5baa641",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "toEmail": "bora@example.com",
+    "subject": "Счёт за поездку SC-030",
+    "body": "Спасибо за поездку! Итого: 55.00 сом. Время в пути: 5 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:37b4b3df-47b4b7-36fd-10e05cf3e1b90da5",
+    "createdAt": "2026-10-13T08:13:44.206Z",
+    "sentAt": "2026-10-13T08:13:45.206Z"
+  },
+  {
+    "id": "fd10e05c-4d90e1-b90d-a5baa64139bfebfb",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "toEmail": "bora@example.com",
+    "subject": "Счёт за поездку SC-030",
+    "body": "Спасибо за поездку! Итого: 263.00 сом. Время в пути: 39 мин, паузы: 2 мин.",
+    "dedupeKey": "invoice:fdb736fd-4db7e0-5cf3-e1b90da5baa64139",
+    "createdAt": "2026-10-13T07:50:58.632Z",
+    "sentAt": "2026-10-13T07:50:59.632Z"
+  },
+  {
+    "id": "f3e1b90d-43a1ba-a641-39bfebfbc7bed6fd",
+    "userId": "73afa451-43afc4-78f1-0c93695d316b2c82",
+    "toEmail": "erik@example.com",
+    "subject": "Счёт за поездку SC-028",
+    "body": "Спасибо за поездку! Итого: 59.00 сом. Время в пути: 5 мин, паузы: 2 мин.",
+    "dedupeKey": "invoice:10e05cf3-40a0b9-0da5-baa64139bfebfbc7",
+    "createdAt": "2026-10-13T06:28:41.664Z",
+    "sentAt": "2026-10-13T06:28:42.664Z"
+  },
+  {
+    "id": "a5baa641-45babf-ebfb-c7bed6fd330d234e",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "toEmail": "alan@example.com",
+    "subject": "Счёт за поездку SC-010",
+    "body": "Спасибо за поездку! Итого: 181.00 сом. Время в пути: 26 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:e1b90da5-41b9a6-4139-bfebfbc7bed6fd33",
+    "createdAt": "2026-10-13T05:50:28.686Z",
+    "sentAt": "2026-10-13T05:50:29.686Z"
+  },
+  {
+    "id": "39bfebfb-49bfbe-d6fd-330d234ed01773ee",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "toEmail": "demo@sharing.kg",
+    "subject": "Счёт за поездку SC-006",
+    "body": "Спасибо за поездку! Итого: 117.00 сом. Время в пути: 15 мин, паузы: 1 мин.",
+    "dedupeKey": "invoice:baa64139-4aa6eb-fbc7-bed6fd330d234ed0",
+    "createdAt": "2026-10-13T04:27:18.687Z",
+    "sentAt": "2026-10-13T04:27:19.687Z"
+  },
+  {
+    "id": "c7bed6fd-47be0d-234e-d01773eefc105d6a",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "toEmail": "bora@example.com",
+    "subject": "Счёт за поездку SC-030",
+    "body": "Спасибо за поездку! Итого: 85.00 сом. Время в пути: 10 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:bfebfbc7-4fabd6-fd33-0d234ed01773eefc",
+    "createdAt": "2026-10-13T03:39:53.081Z",
+    "sentAt": "2026-10-13T03:39:54.081Z"
+  },
+  {
+    "id": "330d234e-438d17-73ee-fc105d6a9b6525fa",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "toEmail": "alan@example.com",
+    "subject": "Счёт за поездку SC-026",
+    "body": "Спасибо за поездку! Итого: 109.00 сом. Время в пути: 14 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:bed6fd33-4e9623-4ed0-1773eefc105d6a9b",
+    "createdAt": "2026-10-13T02:40:02.019Z",
+    "sentAt": "2026-10-13T02:40:03.019Z"
+  },
+  {
+    "id": "d01773ee-409710-5d6a-9b6525fa0f4c7556",
+    "userId": "0773afa4-47b3f6-c478-f10c93695d316b2c",
+    "toEmail": "dina@example.com",
+    "subject": "Счёт за поездку SC-013",
+    "body": "Спасибо за поездку! Итого: 61.00 сом. Время в пути: 6 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:0d234ed0-4da373-eefc-105d6a9b6525fa0f",
+    "createdAt": "2026-10-13T01:12:18.707Z",
+    "sentAt": "2026-10-13T01:12:19.707Z"
+  },
+  {
+    "id": "fc105d6a-4c9065-25fa-0f4c7556a0aab59b",
+    "userId": "0773afa4-47b3f6-c478-f10c93695d316b2c",
+    "toEmail": "dina@example.com",
+    "subject": "Счёт за поездку SC-012",
+    "body": "Спасибо за поездку! Итого: 79.00 сом. Время в пути: 9 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:1773eefc-47b35d-6a9b-6525fa0f4c7556a0",
+    "createdAt": "2026-10-13T00:26:49.998Z",
+    "sentAt": "2026-10-13T00:26:50.998Z"
+  },
+  {
+    "id": "9b6525fa-4ba54c-7556-a0aab59b8553d1a9",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "toEmail": "demo@sharing.kg",
+    "subject": "Счёт за поездку SC-012",
+    "body": "Спасибо за поездку! Итого: 121.00 сом. Время в пути: 16 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:105d6a9b-409d25-fa0f-4c7556a0aab59b85",
+    "createdAt": "2026-10-12T23:25:26.370Z",
+    "sentAt": "2026-10-12T23:25:27.370Z"
+  },
+  {
+    "id": "0f4c7556-4f8caa-b59b-8553d1a9b1ded44a",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "toEmail": "alan@example.com",
+    "subject": "Счёт за поездку SC-008",
+    "body": "Спасибо за поездку! Итого: 127.00 сом. Время в пути: 17 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:6525fa0f-45a575-56a0-aab59b8553d1a9b1",
+    "createdAt": "2026-10-12T22:23:10.891Z",
+    "sentAt": "2026-10-12T22:23:11.891Z"
+  },
+  {
+    "id": "a0aab59b-40aa53-d1a9-b1ded44aa3b3a58f",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "toEmail": "bora@example.com",
+    "subject": "Счёт за поездку SC-007",
+    "body": "Спасибо за поездку! Итого: 243.00 сом. Время в пути: 36 мин, паузы: 1 мин.",
+    "dedupeKey": "invoice:4c7556a0-4cb5b5-9b85-53d1a9b1ded44aa3",
+    "createdAt": "2026-10-12T21:39:57.212Z",
+    "sentAt": "2026-10-12T21:39:58.212Z"
+  },
+  {
+    "id": "8553d1a9-4593de-d44a-a3b3a58fbe135393",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "toEmail": "fiza@example.com",
+    "subject": "Счёт за поездку SC-002",
+    "body": "Спасибо за поездку! Итого: 113.00 сом. Время в пути: 14 мин, паузы: 2 мин.",
+    "dedupeKey": "invoice:aab59b85-4ab5d1-a9b1-ded44aa3b3a58fbe",
+    "createdAt": "2026-10-12T20:32:46.367Z",
+    "sentAt": "2026-10-12T20:32:47.367Z"
+  },
+  {
+    "id": "b1ded44a-419eb3-a58f-be1353932d1c92d3",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "toEmail": "fiza@example.com",
+    "subject": "Счёт за поездку SC-003",
+    "body": "Спасибо за поездку! Итого: 217.00 сом. Время в пути: 32 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:53d1a9b1-4391d4-4aa3-b3a58fbe1353932d",
+    "createdAt": "2026-10-12T20:01:39.424Z",
+    "sentAt": "2026-10-12T20:01:40.424Z"
+  },
+  {
+    "id": "a3b3a58f-43b313-5393-2d1c92d39bac3607",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "toEmail": "bora@example.com",
+    "subject": "Счёт за поездку SC-017",
+    "body": "Спасибо за поездку! Итого: 151.00 сом. Время в пути: 20 мин, паузы: 3 мин.",
+    "dedupeKey": "invoice:ded44aa3-4e94a5-8fbe-1353932d1c92d39b",
+    "createdAt": "2026-10-12T18:26:37.665Z",
+    "sentAt": "2026-10-12T18:26:38.665Z"
+  },
+  {
+    "id": "be135393-4e931c-92d3-9bac3607a5bda049",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "toEmail": "demo@sharing.kg",
+    "subject": "Счёт за поездку SC-030",
+    "body": "Спасибо за поездку! Итого: 253.00 сом. Время в пути: 38 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:b3a58fbe-43a553-932d-1c92d39bac3607a5",
+    "createdAt": "2026-10-12T17:46:56.744Z",
+    "sentAt": "2026-10-12T17:46:57.744Z"
+  },
+  {
+    "id": "2d1c92d3-4d9cac-3607-a5bda04994946b8d",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "toEmail": "alan@example.com",
+    "subject": "Счёт за поездку SC-017",
+    "body": "Спасибо за поездку! Итого: 133.00 сом. Время в пути: 18 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:1353932d-439392-d39b-ac3607a5bda04994",
+    "createdAt": "2026-10-12T16:28:17.298Z",
+    "sentAt": "2026-10-12T16:28:18.298Z"
+  },
+  {
+    "id": "9bac3607-4bacbd-a049-94946b8d0b50c7e7",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "toEmail": "fiza@example.com",
+    "subject": "Счёт за поездку SC-014",
+    "body": "Спасибо за поездку! Итого: 219.00 сом. Время в пути: 32 мин, паузы: 1 мин.",
+    "dedupeKey": "invoice:1c92d39b-4c9236-07a5-bda04994946b8d0b",
+    "createdAt": "2026-10-12T15:35:23.213Z",
+    "sentAt": "2026-10-12T15:35:24.213Z"
+  },
+  {
+    "id": "a5bda049-45bd94-6b8d-0b50c7e7e03d2827",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "toEmail": "fiza@example.com",
+    "subject": "Счёт за поездку SC-004",
+    "body": "Спасибо за поездку! Итого: 219.00 сом. Время в пути: 32 мин, паузы: 1 мин.",
+    "dedupeKey": "invoice:ac3607a5-4cb6a0-4994-946b8d0b50c7e7e0",
+    "createdAt": "2026-10-12T14:35:38.816Z",
+    "sentAt": "2026-10-12T14:35:39.816Z"
+  },
+  {
+    "id": "94946b8d-449450-c7e7-e03d282733b3866a",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "toEmail": "alan@example.com",
+    "subject": "Счёт за поездку SC-026",
+    "body": "Спасибо за поездку! Итого: 133.00 сом. Время в пути: 18 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:bda04994-4da06b-8d0b-50c7e7e03d282733",
+    "createdAt": "2026-10-12T13:24:44.454Z",
+    "sentAt": "2026-10-12T13:24:45.454Z"
+  },
+  {
+    "id": "0b50c7e7-4b903d-2827-33b3866ad4d43788",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "toEmail": "alan@example.com",
+    "subject": "Счёт за поездку SC-027",
+    "body": "Спасибо за поездку! Итого: 109.00 сом. Время в пути: 14 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:946b8d0b-44abc7-e7e0-3d282733b3866ad4",
+    "createdAt": "2026-10-12T12:21:53.108Z",
+    "sentAt": "2026-10-12T12:21:54.108Z"
+  },
+  {
+    "id": "e03d2827-40bdb3-866a-d4d43788e6347d5a",
+    "userId": "73afa451-43afc4-78f1-0c93695d316b2c82",
+    "toEmail": "erik@example.com",
+    "subject": "Счёт за поездку SC-015",
+    "body": "Спасибо за поездку! Итого: 127.00 сом. Время в пути: 17 мин, паузы: 0 мин.",
+    "dedupeKey": "invoice:50c7e7e0-408728-2733-b3866ad4d43788e6",
+    "createdAt": "2026-10-12T11:30:40.285Z",
+    "sentAt": "2026-10-12T11:30:41.285Z"
+  }
+]

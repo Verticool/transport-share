@@ -11,6 +11,7 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -90,20 +91,24 @@ export default tseslint.config(
     },
   },
 
-  // Скрипты и конфиги: они работают с внешним миром (JSON, env) — ослабляем только
-  // правило про консоль, запрет кастов действует и здесь.
+  // Чистый JS/MJS (служебные скрипты, конфиги): type-checked правила неприменимы,
+  // потому что у этих файлов нет TS-проекта. Глобальные объекты Node объявляем явно —
+  // без них `no-undef` ругается на console/process (и это не косметика: правило
+  // ловит опечатки в именах, если список глобалов задан).
+  {
+    files: ['**/*.{js,mjs,cjs}', '**/*.d.mts'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
+
+  // Скрипты и конфиги: работают с внешним миром (JSON, env) — ослабляем только правило про консоль.
   {
     files: ['**/*.config.{ts,js,mjs}', 'backend/src/db/migrations/**', 'scripts/**'],
     rules: {
       'no-console': 'off',
     },
-  },
-
-  // Чистый JS/MJS (служебные скрипты, конфиги): type-checked правила неприменимы,
-  // потому что у этих файлов нет TS-проекта.
-  {
-    files: ['**/*.{js,mjs,cjs}'],
-    extends: [tseslint.configs.disableTypeChecked],
   },
 
   // Тесты: правила типизации те же (фикстуры — через фабрики и zod),

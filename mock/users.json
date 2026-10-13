@@ -1,0 +1,44 @@
+[
+  {
+    "id": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "email": "demo@sharing.kg",
+    "name": "Демо",
+    "createdAt": "2026-09-13T12:00:00.000Z",
+    "updatedAt": "2026-09-13T12:00:00.000Z"
+  },
+  {
+    "id": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "email": "alan@example.com",
+    "name": "Алан",
+    "createdAt": "2026-09-25T01:46:40.000Z",
+    "updatedAt": "2026-09-25T01:46:40.000Z"
+  },
+  {
+    "id": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "email": "bora@example.com",
+    "name": "Бора",
+    "createdAt": "2026-10-06T15:33:20.000Z",
+    "updatedAt": "2026-10-06T15:33:20.000Z"
+  },
+  {
+    "id": "0773afa4-47b3f6-c478-f10c93695d316b2c",
+    "email": "dina@example.com",
+    "name": "Дина",
+    "createdAt": "2026-10-18T05:20:00.000Z",
+    "updatedAt": "2026-10-18T05:20:00.000Z"
+  },
+  {
+    "id": "73afa451-43afc4-78f1-0c93695d316b2c82",
+    "email": "erik@example.com",
+    "name": "Эрик",
+    "createdAt": "2026-10-29T19:06:40.000Z",
+    "updatedAt": "2026-10-29T19:06:40.000Z"
+  },
+  {
+    "id": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "email": "fiza@example.com",
+    "name": "Физа",
+    "createdAt": "2026-11-10T08:53:20.000Z",
+    "updatedAt": "2026-11-10T08:53:20.000Z"
+  }
+]

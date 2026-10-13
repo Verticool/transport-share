@@ -1,0 +1,427 @@
+[
+  {
+    "id": "096e5c84-49ae5e-3e54-b1d437b4b3dffdb7",
+    "rideId": "d57a096e-45ba84-095e-3e54b1d437b4b3df",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "amount": 15700,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 22,
+      "rideAmount": 13200,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 15700
+    },
+    "issuedAt": "2026-10-13T11:25:31.643Z",
+    "createdAt": "2026-10-13T11:25:36.643Z"
+  },
+  {
+    "id": "095e3e54-499ed4-37b4-b3dffdb736fd10e0",
+    "rideId": "5c84095e-4c8454-b1d4-37b4b3dffdb736fd",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "amount": 19700,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 28,
+      "rideAmount": 16800,
+      "pauseMinutes": 2,
+      "pauseAmount": 400,
+      "total": 19700
+    },
+    "issuedAt": "2026-10-13T10:36:00.250Z",
+    "createdAt": "2026-10-13T10:36:05.250Z"
+  },
+  {
+    "id": "b1d437b4-4194df-fdb7-36fd10e05cf3e1b9",
+    "rideId": "3e54b1d4-4e94b4-b3df-fdb736fd10e05cf3",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "amount": 25900,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 39,
+      "rideAmount": 23400,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 25900
+    },
+    "issuedAt": "2026-10-13T09:59:32.044Z",
+    "createdAt": "2026-10-13T09:59:37.044Z"
+  },
+  {
+    "id": "b3dffdb7-439ffd-10e0-5cf3e1b90da5baa6",
+    "rideId": "37b4b3df-47b4b7-36fd-10e05cf3e1b90da5",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "amount": 5500,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 5,
+      "rideAmount": 3000,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 5500
+    },
+    "issuedAt": "2026-10-13T08:13:45.206Z",
+    "createdAt": "2026-10-13T08:13:50.206Z"
+  },
+  {
+    "id": "36fd10e0-46bdf3-e1b9-0da5baa64139bfeb",
+    "rideId": "fdb736fd-4db7e0-5cf3-e1b90da5baa64139",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "amount": 26300,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 39,
+      "rideAmount": 23400,
+      "pauseMinutes": 2,
+      "pauseAmount": 400,
+      "total": 26300
+    },
+    "issuedAt": "2026-10-13T07:50:59.632Z",
+    "createdAt": "2026-10-13T07:51:04.632Z"
+  },
+  {
+    "id": "5cf3e1b9-4cb3a5-baa6-4139bfebfbc7bed6",
+    "rideId": "10e05cf3-40a0b9-0da5-baa64139bfebfbc7",
+    "userId": "73afa451-43afc4-78f1-0c93695d316b2c82",
+    "amount": 5900,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 5,
+      "rideAmount": 3000,
+      "pauseMinutes": 2,
+      "pauseAmount": 400,
+      "total": 5900
+    },
+    "issuedAt": "2026-10-13T06:28:42.664Z",
+    "createdAt": "2026-10-13T06:28:47.664Z"
+  },
+  {
+    "id": "0da5baa6-4da539-bfeb-fbc7bed6fd330d23",
+    "rideId": "e1b90da5-41b9a6-4139-bfebfbc7bed6fd33",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "amount": 18100,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 26,
+      "rideAmount": 15600,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 18100
+    },
+    "issuedAt": "2026-10-13T05:50:29.686Z",
+    "createdAt": "2026-10-13T05:50:34.686Z"
+  },
+  {
+    "id": "4139bfeb-41b9c7-bed6-fd330d234ed01773",
+    "rideId": "baa64139-4aa6eb-fbc7-bed6fd330d234ed0",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "amount": 11700,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 15,
+      "rideAmount": 9000,
+      "pauseMinutes": 1,
+      "pauseAmount": 200,
+      "total": 11700
+    },
+    "issuedAt": "2026-10-13T04:27:19.687Z",
+    "createdAt": "2026-10-13T04:27:24.687Z"
+  },
+  {
+    "id": "fbc7bed6-4b8733-0d23-4ed01773eefc105d",
+    "rideId": "bfebfbc7-4fabd6-fd33-0d234ed01773eefc",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "amount": 8500,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 10,
+      "rideAmount": 6000,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 8500
+    },
+    "issuedAt": "2026-10-13T03:39:54.081Z",
+    "createdAt": "2026-10-13T03:39:59.081Z"
+  },
+  {
+    "id": "fd330d23-4db3d0-1773-eefc105d6a9b6525",
+    "rideId": "bed6fd33-4e9623-4ed0-1773eefc105d6a9b",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "amount": 10900,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 14,
+      "rideAmount": 8400,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 10900
+    },
+    "issuedAt": "2026-10-13T02:40:03.019Z",
+    "createdAt": "2026-10-13T02:40:08.019Z"
+  },
+  {
+    "id": "4ed01773-4e90fc-105d-6a9b6525fa0f4c75",
+    "rideId": "0d234ed0-4da373-eefc-105d6a9b6525fa0f",
+    "userId": "0773afa4-47b3f6-c478-f10c93695d316b2c",
+    "amount": 6100,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 6,
+      "rideAmount": 3600,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 6100
+    },
+    "issuedAt": "2026-10-13T01:12:19.707Z",
+    "createdAt": "2026-10-13T01:12:24.707Z"
+  },
+  {
+    "id": "eefc105d-4ebc9b-6525-fa0f4c7556a0aab5",
+    "rideId": "1773eefc-47b35d-6a9b-6525fa0f4c7556a0",
+    "userId": "0773afa4-47b3f6-c478-f10c93695d316b2c",
+    "amount": 7900,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 9,
+      "rideAmount": 5400,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 7900
+    },
+    "issuedAt": "2026-10-13T00:26:50.998Z",
+    "createdAt": "2026-10-13T00:26:55.998Z"
+  },
+  {
+    "id": "6a9b6525-4a9b0f-4c75-56a0aab59b8553d1",
+    "rideId": "105d6a9b-409d25-fa0f-4c7556a0aab59b85",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "amount": 12100,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 16,
+      "rideAmount": 9600,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 12100
+    },
+    "issuedAt": "2026-10-12T23:25:27.370Z",
+    "createdAt": "2026-10-12T23:25:32.370Z"
+  },
+  {
+    "id": "fa0f4c75-4a8fa0-aab5-9b8553d1a9b1ded4",
+    "rideId": "6525fa0f-45a575-56a0-aab59b8553d1a9b1",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "amount": 12700,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 17,
+      "rideAmount": 10200,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 12700
+    },
+    "issuedAt": "2026-10-12T22:23:11.891Z",
+    "createdAt": "2026-10-12T22:23:16.891Z"
+  },
+  {
+    "id": "56a0aab5-46a085-53d1-a9b1ded44aa3b3a5",
+    "rideId": "4c7556a0-4cb5b5-9b85-53d1a9b1ded44aa3",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "amount": 24300,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 36,
+      "rideAmount": 21600,
+      "pauseMinutes": 1,
+      "pauseAmount": 200,
+      "total": 24300
+    },
+    "issuedAt": "2026-10-12T21:39:58.212Z",
+    "createdAt": "2026-10-12T21:40:03.212Z"
+  },
+  {
+    "id": "9b8553d1-4b85b1-ded4-4aa3b3a58fbe1353",
+    "rideId": "aab59b85-4ab5d1-a9b1-ded44aa3b3a58fbe",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "amount": 11300,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 14,
+      "rideAmount": 8400,
+      "pauseMinutes": 2,
+      "pauseAmount": 400,
+      "total": 11300
+    },
+    "issuedAt": "2026-10-12T20:32:47.367Z",
+    "createdAt": "2026-10-12T20:32:52.367Z"
+  },
+  {
+    "id": "a9b1ded4-49b1a3-b3a5-8fbe1353932d1c92",
+    "rideId": "53d1a9b1-4391d4-4aa3-b3a58fbe1353932d",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "amount": 21700,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 32,
+      "rideAmount": 19200,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 21700
+    },
+    "issuedAt": "2026-10-12T20:01:40.424Z",
+    "createdAt": "2026-10-12T20:01:45.424Z"
+  },
+  {
+    "id": "4aa3b3a5-4aa3be-1353-932d1c92d39bac36",
+    "rideId": "ded44aa3-4e94a5-8fbe-1353932d1c92d39b",
+    "userId": "aa0773af-4a8751-f6c4-78f10c93695d316b",
+    "amount": 15100,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 20,
+      "rideAmount": 12000,
+      "pauseMinutes": 3,
+      "pauseAmount": 600,
+      "total": 15100
+    },
+    "issuedAt": "2026-10-12T18:26:38.665Z",
+    "createdAt": "2026-10-12T18:26:43.665Z"
+  },
+  {
+    "id": "8fbe1353-4fbe2d-1c92-d39bac3607a5bda0",
+    "rideId": "b3a58fbe-43a553-932d-1c92d39bac3607a5",
+    "userId": "9af1aa07-4ab1af-a451-f6c478f10c93695d",
+    "amount": 25300,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 38,
+      "rideAmount": 22800,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 25300
+    },
+    "issuedAt": "2026-10-12T17:46:57.744Z",
+    "createdAt": "2026-10-12T17:47:02.744Z"
+  },
+  {
+    "id": "932d1c92-43ad9b-ac36-07a5bda04994946b",
+    "rideId": "1353932d-439392-d39b-ac3607a5bda04994",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "amount": 13300,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 18,
+      "rideAmount": 10800,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 13300
+    },
+    "issuedAt": "2026-10-12T16:28:18.298Z",
+    "createdAt": "2026-10-12T16:28:23.298Z"
+  },
+  {
+    "id": "d39bac36-439ba5-bda0-4994946b8d0b50c7",
+    "rideId": "1c92d39b-4c9236-07a5-bda04994946b8d0b",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "amount": 21900,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 32,
+      "rideAmount": 19200,
+      "pauseMinutes": 1,
+      "pauseAmount": 200,
+      "total": 21900
+    },
+    "issuedAt": "2026-10-12T15:35:24.213Z",
+    "createdAt": "2026-10-12T15:35:29.213Z"
+  },
+  {
+    "id": "07a5bda0-47a594-946b-8d0b50c7e7e03d28",
+    "rideId": "ac3607a5-4cb6a0-4994-946b8d0b50c7e7e0",
+    "userId": "afa451f6-4fa478-f10c-93695d316b2c82c3",
+    "amount": 21900,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 32,
+      "rideAmount": 19200,
+      "pauseMinutes": 1,
+      "pauseAmount": 200,
+      "total": 21900
+    },
+    "issuedAt": "2026-10-12T14:35:39.816Z",
+    "createdAt": "2026-10-12T14:35:44.816Z"
+  },
+  {
+    "id": "4994946b-49940b-50c7-e7e03d282733b386",
+    "rideId": "bda04994-4da06b-8d0b-50c7e7e03d282733",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "amount": 13300,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 18,
+      "rideAmount": 10800,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 13300
+    },
+    "issuedAt": "2026-10-12T13:24:45.454Z",
+    "createdAt": "2026-10-12T13:24:50.454Z"
+  },
+  {
+    "id": "8d0b50c7-4d8be0-3d28-2733b3866ad4d437",
+    "rideId": "946b8d0b-44abc7-e7e0-3d282733b3866ad4",
+    "userId": "f1aa0773-41aaa4-51f6-c478f10c93695d31",
+    "amount": 10900,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 14,
+      "rideAmount": 8400,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 10900
+    },
+    "issuedAt": "2026-10-12T12:21:54.108Z",
+    "createdAt": "2026-10-12T12:21:59.108Z"
+  },
+  {
+    "id": "e7e03d28-47a033-b386-6ad4d43788e6347d",
+    "rideId": "50c7e7e0-408728-2733-b3866ad4d43788e6",
+    "userId": "73afa451-43afc4-78f1-0c93695d316b2c82",
+    "amount": 12700,
+    "currency": "KGS",
+    "breakdown": {
+      "unlockFee": 2500,
+      "rideMinutes": 17,
+      "rideAmount": 10200,
+      "pauseMinutes": 0,
+      "pauseAmount": 0,
+      "total": 12700
+    },
+    "issuedAt": "2026-10-12T11:30:41.285Z",
+    "createdAt": "2026-10-12T11:30:46.285Z"
+  }
+]
