@@ -1,0 +1,33 @@
+{
+  "name": "@sharing/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Доменный контракт: типы, zod-схемы, тарифы, время, деньги, зона, ws-протокол, симулятор",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain": "./src/domain.ts",
+    "./schemas": "./src/schemas.ts",
+    "./constants": "./src/constants.ts",
+    "./money": "./src/money.ts",
+    "./time": "./src/time.ts",
+    "./zone": "./src/zone.ts",
+    "./sim": "./src/sim/index.ts",
+    "./ws": "./src/ws-protocol.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}

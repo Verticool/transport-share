@@ -1,0 +1,25 @@
+{
+  "name": "transport-sharing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Сервис шеринга самокатов: карта парка, бронь, поездки, тарификация. React+Vite / Fastify / PostgreSQL в Docker.",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "shared",
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "test:e2e": "npm run test:e2e -w frontend",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "migrate": "npm run migrate -w backend",
+    "seed": "npm run seed -w backend"
+  }
+}
