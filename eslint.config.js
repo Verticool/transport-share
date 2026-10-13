@@ -91,6 +91,16 @@ export default tseslint.config(
     },
   },
 
+  // Примитивы интерфейса: канонические компоненты shadcn/ui держат рядом и компонент,
+  // и его варианты оформления (cva). Правило fast-refresh этого не любит, но дробить
+  // файл на `button.tsx` и `button-variants.ts` ради предупреждения — лишняя косметика.
+  {
+    files: ['frontend/src/components/ui/**/*.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+
   // Чистый JS/MJS (служебные скрипты, конфиги): type-checked правила неприменимы,
   // потому что у этих файлов нет TS-проекта. Глобальные объекты Node объявляем явно —
   // без них `no-undef` ругается на console/process (и это не косметика: правило
