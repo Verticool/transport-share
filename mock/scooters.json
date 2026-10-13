@@ -1,6 +1,6 @@
 [
   {
-    "id": "a451f6c4-4491f1-0c93-695d316b2c82c333",
+    "id": "a451f6c4-78f1-4c93-a95d-316b2c82c333",
     "code": "SC-001",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -12,7 +12,7 @@
     "updatedAt": "2026-09-13T12:02:40.000Z"
   },
   {
-    "id": "51f6c478-41b60c-9369-5d316b2c82c333a4",
+    "id": "51f6c478-f10c-4369-9d31-6b2c82c333a4",
     "code": "SC-002",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -24,7 +24,7 @@
     "updatedAt": "2026-09-13T12:04:20.000Z"
   },
   {
-    "id": "f6c478f1-468493-695d-316b2c82c333a415",
+    "id": "f6c478f1-0c93-495d-b16b-2c82c333a415",
     "code": "SC-003",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -36,7 +36,7 @@
     "updatedAt": "2026-09-13T12:06:00.000Z"
   },
   {
-    "id": "c478f10c-44b869-5d31-6b2c82c333a41559",
+    "id": "c478f10c-9369-4d31-ab2c-82c333a41559",
     "code": "SC-004",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -48,7 +48,7 @@
     "updatedAt": "2026-09-13T12:07:40.000Z"
   },
   {
-    "id": "78f10c93-48b15d-316b-2c82c333a415591a",
+    "id": "78f10c93-695d-416b-ac82-c333a415591a",
     "code": "SC-005",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -60,7 +60,7 @@
     "updatedAt": "2026-09-13T12:09:20.000Z"
   },
   {
-    "id": "f10c9369-418c31-6b2c-82c333a415591a13",
+    "id": "f10c9369-5d31-4b2c-82c3-33a415591a13",
     "code": "SC-006",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -72,7 +72,7 @@
     "updatedAt": "2026-09-13T12:11:00.000Z"
   },
   {
-    "id": "0c93695d-4c936b-2c82-c333a415591a132a",
+    "id": "0c93695d-316b-4c82-8333-a415591a132a",
     "code": "SC-007",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -84,7 +84,7 @@
     "updatedAt": "2026-09-13T12:12:40.000Z"
   },
   {
-    "id": "93695d31-43a92c-82c3-33a415591a132a88",
+    "id": "93695d31-6b2c-42c3-b3a4-15591a132a88",
     "code": "SC-008",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -96,7 +96,7 @@
     "updatedAt": "2026-09-13T12:14:20.000Z"
   },
   {
-    "id": "695d316b-499d82-c333-a415591a132a8822",
+    "id": "695d316b-2c82-4333-a415-591a132a8822",
     "code": "SC-009",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -108,7 +108,7 @@
     "updatedAt": "2026-09-13T12:16:00.000Z"
   },
   {
-    "id": "5d316b2c-4db1c3-33a4-15591a132a88227b",
+    "id": "5d316b2c-82c3-43a4-9559-1a132a88227b",
     "code": "SC-010",
     "model": "Ninebot Max G30",
     "status": "free",
@@ -120,7 +120,7 @@
     "updatedAt": "2026-09-13T12:17:40.000Z"
   },
   {
-    "id": "316b2c82-41ab33-a415-591a132a88227b5e",
+    "id": "316b2c82-c333-4415-991a-132a88227b5e",
     "code": "SC-011",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -132,7 +132,7 @@
     "updatedAt": "2026-09-13T12:19:20.000Z"
   },
   {
-    "id": "6b2c82c3-4baca4-1559-1a132a88227b5e6b",
+    "id": "6b2c82c3-33a4-4559-9a13-2a88227b5e6b",
     "code": "SC-012",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -144,7 +144,7 @@
     "updatedAt": "2026-09-13T12:21:00.000Z"
   },
   {
-    "id": "2c82c333-4c8215-591a-132a88227b5e6bfa",
+    "id": "2c82c333-a415-491a-932a-88227b5e6bfa",
     "code": "SC-013",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -156,7 +156,7 @@
     "updatedAt": "2026-09-13T12:22:40.000Z"
   },
   {
-    "id": "82c333a4-428359-1a13-2a88227b5e6bfa43",
+    "id": "82c333a4-1559-4a13-aa88-227b5e6bfa43",
     "code": "SC-014",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -168,7 +168,7 @@
     "updatedAt": "2026-09-13T12:24:20.000Z"
   },
   {
-    "id": "c333a415-43b31a-132a-88227b5e6bfa43a8",
+    "id": "c333a415-591a-432a-8822-7b5e6bfa43a8",
     "code": "SC-015",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -180,7 +180,7 @@
     "updatedAt": "2026-09-13T12:26:00.000Z"
   },
   {
-    "id": "33a41559-43a413-2a88-227b5e6bfa43a8b8",
+    "id": "33a41559-1a13-4a88-a27b-5e6bfa43a8b8",
     "code": "SC-016",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -192,7 +192,7 @@
     "updatedAt": "2026-09-13T12:27:40.000Z"
   },
   {
-    "id": "a415591a-44952a-8822-7b5e6bfa43a8b8cc",
+    "id": "a415591a-132a-4822-bb5e-6bfa43a8b8cc",
     "code": "SC-017",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -204,7 +204,7 @@
     "updatedAt": "2026-09-13T12:29:20.000Z"
   },
   {
-    "id": "15591a13-459988-227b-5e6bfa43a8b8ccf9",
+    "id": "15591a13-2a88-427b-9e6b-fa43a8b8ccf9",
     "code": "SC-018",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -216,7 +216,7 @@
     "updatedAt": "2026-09-13T12:31:00.000Z"
   },
   {
-    "id": "591a132a-499a22-7b5e-6bfa43a8b8ccf912",
+    "id": "591a132a-8822-4b5e-abfa-43a8b8ccf912",
     "code": "SC-019",
     "model": "Xiaomi Mi Pro 2",
     "status": "free",
@@ -228,7 +228,7 @@
     "updatedAt": "2026-09-13T12:32:40.000Z"
   },
   {
-    "id": "1a132a88-4a937b-5e6b-fa43a8b8ccf912f0",
+    "id": "1a132a88-227b-4e6b-ba43-a8b8ccf912f0",
     "code": "SC-020",
     "model": "Xiaomi Mi Pro 2",
     "status": "reserved",
@@ -240,7 +240,7 @@
     "updatedAt": "2026-09-13T12:34:20.000Z"
   },
   {
-    "id": "132a8822-43aa5e-6bfa-43a8b8ccf912f022",
+    "id": "132a8822-7b5e-4bfa-83a8-b8ccf912f022",
     "code": "SC-021",
     "model": "Kugoo M4 Pro",
     "status": "reserved",
@@ -252,7 +252,7 @@
     "updatedAt": "2026-09-13T12:36:00.000Z"
   },
   {
-    "id": "2a88227b-4a886b-fa43-a8b8ccf912f02276",
+    "id": "2a88227b-5e6b-4a43-a8b8-ccf912f02276",
     "code": "SC-022",
     "model": "Kugoo M4 Pro",
     "status": "reserved",
@@ -264,7 +264,7 @@
     "updatedAt": "2026-09-13T12:37:40.000Z"
   },
   {
-    "id": "88227b5e-48a2fa-43a8-b8ccf912f02276e4",
+    "id": "88227b5e-6bfa-43a8-b8cc-f912f02276e4",
     "code": "SC-023",
     "model": "Kugoo M4 Pro",
     "status": "reserved",
@@ -276,7 +276,7 @@
     "updatedAt": "2026-09-13T12:39:20.000Z"
   },
   {
-    "id": "227b5e6b-42bb43-a8b8-ccf912f02276e40b",
+    "id": "227b5e6b-fa43-48b8-8cf9-12f02276e40b",
     "code": "SC-024",
     "model": "Kugoo M4 Pro",
     "status": "reserved",
@@ -288,7 +288,7 @@
     "updatedAt": "2026-09-13T12:41:00.000Z"
   },
   {
-    "id": "7b5e6bfa-4b9ea8-b8cc-f912f02276e40b9d",
+    "id": "7b5e6bfa-43a8-48cc-b912-f02276e40b9d",
     "code": "SC-025",
     "model": "Kugoo M4 Pro",
     "status": "reserved",
@@ -300,7 +300,7 @@
     "updatedAt": "2026-09-13T12:42:40.000Z"
   },
   {
-    "id": "5e6bfa43-4eabb8-ccf9-12f02276e40b9dd5",
+    "id": "5e6bfa43-a8b8-4cf9-92f0-2276e40b9dd5",
     "code": "SC-026",
     "model": "Kugoo M4 Pro",
     "status": "in_ride",
@@ -312,7 +312,7 @@
     "updatedAt": "2026-09-13T12:44:20.000Z"
   },
   {
-    "id": "6bfa43a8-4bbacc-f912-f02276e40b9dd57a",
+    "id": "6bfa43a8-b8cc-4912-b022-76e40b9dd57a",
     "code": "SC-027",
     "model": "Kugoo M4 Pro",
     "status": "in_ride",
@@ -324,7 +324,7 @@
     "updatedAt": "2026-09-13T12:46:00.000Z"
   },
   {
-    "id": "fa43a8b8-4a83f9-12f0-2276e40b9dd57a09",
+    "id": "fa43a8b8-ccf9-42f0-a276-e40b9dd57a09",
     "code": "SC-028",
     "model": "Kugoo M4 Pro",
     "status": "in_ride",
@@ -336,7 +336,7 @@
     "updatedAt": "2026-09-13T12:47:40.000Z"
   },
   {
-    "id": "43a8b8cc-43a812-f022-76e40b9dd57a096e",
+    "id": "43a8b8cc-f912-4022-b6e4-0b9dd57a096e",
     "code": "SC-029",
     "model": "Kugoo M4 Pro",
     "status": "in_ride",
@@ -348,7 +348,7 @@
     "updatedAt": "2026-09-13T12:49:20.000Z"
   },
   {
-    "id": "a8b8ccf9-48b8f0-2276-e40b9dd57a096e5c",
+    "id": "a8b8ccf9-12f0-4276-a40b-9dd57a096e5c",
     "code": "SC-030",
     "model": "Kugoo M4 Pro",
     "status": "in_ride",
@@ -360,7 +360,7 @@
     "updatedAt": "2026-09-13T12:51:00.000Z"
   },
   {
-    "id": "b8ccf912-488c22-76e4-0b9dd57a096e5c84",
+    "id": "b8ccf912-f022-46e4-8b9d-d57a096e5c84",
     "code": "SC-031",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -372,7 +372,7 @@
     "updatedAt": "2026-09-13T12:52:40.000Z"
   },
   {
-    "id": "ccf912f0-4cb976-e40b-9dd57a096e5c8409",
+    "id": "ccf912f0-2276-440b-9dd5-7a096e5c8409",
     "code": "SC-032",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -384,7 +384,7 @@
     "updatedAt": "2026-09-13T12:54:20.000Z"
   },
   {
-    "id": "f912f022-4992e4-0b9d-d57a096e5c84095e",
+    "id": "f912f022-76e4-4b9d-957a-096e5c84095e",
     "code": "SC-033",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -396,7 +396,7 @@
     "updatedAt": "2026-09-13T12:56:00.000Z"
   },
   {
-    "id": "12f02276-42b00b-9dd5-7a096e5c84095e3e",
+    "id": "12f02276-e40b-4dd5-ba09-6e5c84095e3e",
     "code": "SC-034",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -408,7 +408,7 @@
     "updatedAt": "2026-09-13T12:57:40.000Z"
   },
   {
-    "id": "f02276e4-40a29d-d57a-096e5c84095e3e54",
+    "id": "f02276e4-0b9d-457a-896e-5c84095e3e54",
     "code": "SC-035",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -420,7 +420,7 @@
     "updatedAt": "2026-09-13T12:59:20.000Z"
   },
   {
-    "id": "2276e40b-42b6d5-7a09-6e5c84095e3e54b1",
+    "id": "2276e40b-9dd5-4a09-ae5c-84095e3e54b1",
     "code": "SC-036",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -432,7 +432,7 @@
     "updatedAt": "2026-09-13T13:01:00.000Z"
   },
   {
-    "id": "76e40b9d-46a47a-096e-5c84095e3e54b1d4",
+    "id": "76e40b9d-d57a-496e-9c84-095e3e54b1d4",
     "code": "SC-037",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -444,7 +444,7 @@
     "updatedAt": "2026-09-13T13:02:40.000Z"
   },
   {
-    "id": "e40b9dd5-448b09-6e5c-84095e3e54b1d437",
+    "id": "e40b9dd5-7a09-4e5c-8409-5e3e54b1d437",
     "code": "SC-038",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -456,7 +456,7 @@
     "updatedAt": "2026-09-13T13:04:20.000Z"
   },
   {
-    "id": "0b9dd57a-4b9d6e-5c84-095e3e54b1d437b4",
+    "id": "0b9dd57a-096e-4c84-895e-3e54b1d437b4",
     "code": "SC-039",
     "model": "Ninebot F40",
     "status": "unavailable",
@@ -468,7 +468,7 @@
     "updatedAt": "2026-09-13T13:06:00.000Z"
   },
   {
-    "id": "9dd57a09-4d955c-8409-5e3e54b1d437b4b3",
+    "id": "9dd57a09-6e5c-4409-9e3e-54b1d437b4b3",
     "code": "SC-040",
     "model": "Ninebot F40",
     "status": "unavailable",

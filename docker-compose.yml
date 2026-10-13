@@ -1,0 +1,106 @@
+# docker-compose.yml — локальный запуск сервиса целиком.
+#
+# Три постоянных контейнера (требование ТЗ): база, бэкенд, фронт. Плюс два одноразовых
+# (`db-migrate`, `db-seed`), которые выполняют миграции и наполнение базы и завершаются: держать
+# их запущенными незачем, а порядок «схема → данные → сервис» задаётся через depends_on.
+#
+# Наружу смотрят только фронт (8088) и база (5433 — чтобы можно было подключиться psql-ом при
+# отладке). Бэкенд наружу не публикуется: фронт проксирует к нему /api и /ws.
+
+name: transport-sharing
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: sharing-db
+    environment:
+      POSTGRES_USER: sharing
+      POSTGRES_PASSWORD: sharing
+      POSTGRES_DB: sharing
+      # Русский язык в сообщениях и сортировке: данные локализованы, «ё» должна вести себя как «е»-соседка.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      - '5433:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sharing -d sharing']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  db-migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sharing-db-migrate
+    command: ['npm', 'run', 'migrate', '-w', 'backend']
+    environment:
+      DATABASE_URL: postgres://sharing:sharing@db:5432/sharing
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
+  db-seed:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sharing-db-seed
+    command: ['npm', 'run', 'seed', '-w', 'backend']
+    environment:
+      DATABASE_URL: postgres://sharing:sharing@db:5432/sharing
+      MOCK_DIR: /app/mock
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    restart: 'no'
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sharing-backend
+    environment:
+      NODE_ENV: production
+      PORT: '8080'
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://sharing:sharing@db:5432/sharing
+      LOG_LEVEL: info
+      MOCK_DIR: /app/mock
+      ACCESS_TOKEN_SECRET: local-dev-secret-change-before-real-use
+    depends_on:
+      db-seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Как фронт обращается к данным из браузера: через тот же origin, что и страница.
+        VITE_API_MODE: http
+    container_name: sharing-frontend
+    ports:
+      - '8088:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db-data:

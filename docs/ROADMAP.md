@@ -137,17 +137,23 @@ Evidence: `docs/evidence/S1/` (`acceptance-time-zone-money.txt`, `time-acceptanc
 
 ---
 
-## S8. Бэкенд: каркас, БД, миграции  ·  статус: [ ]  ·  делает О + В
+## S8. Бэкенд: каркас, БД, миграции  ·  статус: [x]  ·  делает О
 
-Задачи:
-1. Fastify: `server.ts`, pino-логи, graceful shutdown, healthcheck-ручка. CORS не подключаем: и в dev (Vite-прокси), и в Docker (nginx-прокси) фронт и бэк находятся на одном origin.
-2. `pg.Pool` + транзакционный хелпер; свой раннер SQL-миграций (`schema_migrations`, каждая в транзакции).
-3. Миграции: таблицы из `ARCHITECTURE.md §5`, триггер `set_updated_at`, частичные уникальные индексы, CHECK-и.
-4. Сид из `mock/*.json` (идемпотентный, `ON CONFLICT DO NOTHING`).
-5. `GET /api/health` + `server_time`.
+Задачи: [x] Fastify 5 (`buildApp` + `index.ts`), pino-логи, graceful shutdown, `GET /api/health`
+с состоянием базы; [x] `pg.Pool` + хелпер транзакций; [x] свой раннер SQL-миграций
+(`schema_migrations` с контрольной суммой, каждая миграция в транзакции, защита от правки
+применённого файла); [x] миграция `001_init` — таблицы из `ARCHITECTURE.md §5`, триггер
+`set_updated_at`, частичные уникальные индексы, CHECK-и; [x] идемпотентный сид из `mock/*.json`;
+[x] `docker-compose.yml` с базой, одноразовыми `db-migrate`/`db-seed` и бэкендом.
 
-Критерий: `docker compose up -d db` → `npm run migrate && npm run seed -w backend` → тест на инварианты БД
-(второй активный бронь/заезд невозможен, `updated_at` меняется триггером) — сырой вывод.
+Критерий выполнен: `docker compose up -d db` → `npm run migrate && npm run seed -w backend` →
+6 пользователей / 40 самокатов / 25 поездок / 25 счетов / 25 писем в базе; тесты гарантий схемы
+(вторая активная бронь, второй счёт на поездку, второе письмо с тем же ключом, `updated_at`
+триггером, CHECK-и) — зелёные на живой базе. Сырые выводы: `docs/evidence/S8/db-acceptance.txt`.
+
+Найденный дефект: генератор мок-данных писал идентификаторы в формате 8-6-6-16 вместо
+канонических UUID 8-4-4-4-12; PostgreSQL такие значения не принимает. Генератор исправлен,
+данные перегенерированы, формат закрыт тестом (`backend/tests/unit/mock-data.test.ts`).
 
 ## S9. Бэкенд: REST + WS + симулятор  ·  статус: [ ]  ·  делает О + В
 

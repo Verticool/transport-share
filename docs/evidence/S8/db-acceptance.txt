@@ -1,0 +1,70 @@
+=== S8 · бэкенд: каркас, БД, миграции · 2026-10-13T17:27:41Z ===
+
+--- 1. состав базы после миграции ---
+ version  
+----------
+ 001_init
+(1 row)
+
+ users | scooters | rides | invoices | emails 
+-------+----------+-------+----------+--------
+     6 |       40 |    25 |       25 |     25
+(1 row)
+
+--- 2. индекс, который держит правило 'один самокат - одна бронь' ---
+            indexname            |                                                            indexdef                                                             
+---------------------------------+---------------------------------------------------------------------------------------------------------------------------------
+ bookings_one_active_per_scooter | CREATE UNIQUE INDEX bookings_one_active_per_scooter ON public.bookings USING btree (scooter_id) WHERE (status = 'active'::text)
+ rides_one_open_per_scooter      | CREATE UNIQUE INDEX rides_one_open_per_scooter ON public.rides USING btree (scooter_id) WHERE (status <> 'finished'::text)
+ ride_pauses_one_open_per_ride   | CREATE UNIQUE INDEX ride_pauses_one_open_per_ride ON public.ride_pauses USING btree (ride_id) WHERE (ended_at IS NULL)
+ invoices_ride_unique            | CREATE UNIQUE INDEX invoices_ride_unique ON public.invoices USING btree (ride_id)
+ emails_dedupe_key_unique        | CREATE UNIQUE INDEX emails_dedupe_key_unique ON public.emails USING btree (dedupe_key)
+(5 rows)
+
+--- 3. попытка нарушить правило напрямую в БД ---
+INSERT 0 1
+ERROR:  duplicate key value violates unique constraint "bookings_one_active_per_scooter"
+DETAIL:  Key (scooter_id)=(a451f6c4-78f1-4c93-a95d-316b2c82c333) already exists.
+(вторая вставка обязана упасть с 23505 unique_violation)
+
+--- 4. метку updated_at ставит триггер, а не приложение ---
+  code  | status |       updated_at       
+--------+--------+------------------------
+ SC-001 | free   | 2026-09-13 12:02:40+00
+(1 row)
+
+UPDATE 1
+  code  |  status  |          updated_at           
+--------+----------+-------------------------------
+ SC-001 | reserved | 2026-10-13 17:27:42.701039+00
+(1 row)
+
+
+--- 5. проверка доступности (живой сервер на 8080) ---
+HTTP/1.1 200 OK
+content-type: application/json; charset=utf-8
+content-length: 149
+{"status":"ok","version":"0.1.0","serverTime":"2026-10-13T17:27:49.176Z","uptimeSeconds":21.731,"db":{"ok":true,"latencyMs":1,"migrationsApplied":1}}
+
+--- 6. тесты бэкенда ---
+без TEST_DATABASE_URL (только то, что не требует базы):
+ [2m[90m↓[39m[22m tests/db/invariants.test.ts [2m([22m[2m12 tests[22m[2m | [22m[33m12 skipped[39m[2m)[22m
+[2m Test Files [22m [1m[32m4 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (5)[39m
+[2m      Tests [22m [1m[32m20 passed[39m[22m[2m | [22m[33m12 skipped[39m[90m (32)[39m
+
+с TEST_DATABASE_URL (включая гарантии схемы):
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m32 passed[39m[22m[90m (32)[39m
+
+--- 7. типы и линтер ---
+backend tsc: exit=0
+eslint: exit=0
+
+--- 8. найденный и исправленный дефект ---
+генератор мок-данных формировал идентификаторы в формате 8-6-6-16 (последняя группа 16 hex-символов)
+вместо канонического UUID 8-4-4-4-12. До S8 это было незаметно: моки читал только фронт,
+где любой строке верят как идентификатору. PostgreSQL такие значения не принимает:
+  ошибка сида: invalid input syntax for type uuid: "9af1aa07-4ab1af-a451-f6c478f10c93695d"
+Исправление: uid() в scripts/generate-mock.mjs раскладывает 16 байт по RFC 4122
+  (версия 4 в 7-м байте, вариант 1 в 9-м). Данные перегенерированы, все 121 идентификатор
+  проверены регуляркой на формат UUID v4 (невалидных: 0).

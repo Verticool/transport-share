@@ -30,30 +30,25 @@ const SEED = 42;
 
 // ─── Утилиты ──────────────────────────────────────────────────────────────────
 
-/** Детерминированный UUID v4-подобный из seed + счётчика. */
+/** Детерминированный UUID v4 из seed + счётчика. */
 function uid(counter) {
   const hex = (n) => String(n.toString(16).padStart(2, '0'));
-  const seedBytes = mulberry32(SEED + counter)();
-  const b0 = Math.floor(seedBytes * 256);
-  const b1 = Math.floor(mulberry32(SEED + counter + 1)() * 256);
-  const b2 = Math.floor(mulberry32(SEED + counter + 2)() * 256);
-  const b3 = Math.floor(mulberry32(SEED + counter + 3)() * 256);
-  const b4 = 0; void b4;
-  const b5 = Math.floor(mulberry32(SEED + counter + 5)() * 256);
-  const b6 = Math.floor(mulberry32(SEED + counter + 6)() * 256);
-  const b7 = Math.floor(mulberry32(SEED + counter + 7)() * 256);
-  const b8 = Math.floor(mulberry32(SEED + counter + 8)() * 256);
-  const b9 = Math.floor(mulberry32(SEED + counter + 9)() * 256);
-  const b10 = Math.floor(mulberry32(SEED + counter + 10)() * 256);
-  const b11 = Math.floor(mulberry32(SEED + counter + 11)() * 256);
-  const b12 = Math.floor(mulberry32(SEED + counter + 12)() * 256);
-  const b13 = Math.floor(mulberry32(SEED + counter + 13)() * 256);
-  const b14 = Math.floor(mulberry32(SEED + counter + 14)() * 256);
-  const b15 = Math.floor(mulberry32(SEED + counter + 15)() * 256);
-  // version 4, variant 1
-  const v = ((b0 & 0x0f) | 0x40).toString(16);
-  const lv = ((b1 & 0x3f) | 0x80).toString(16);
-  return `${hex(b0)}${hex(b1)}${hex(b2)}${hex(b3)}-${v}${lv}${hex(b5)}-${hex(b6)}${hex(b7)}-${hex(b8)}${hex(b9)}${hex(b10)}${hex(b11)}${hex(b12)}${hex(b13)}${hex(b14)}${hex(b15)}`;
+  // 16 байт: раскладка строго по RFC 4122 — 8-4-4-4-12. Иначе PostgreSQL не примет значение
+  // как uuid (на этом проект и споткнулся: генератор выдавал 8-6-6-16).
+  const b = [];
+  for (let i = 0; i < 16; i += 1) {
+    b.push(Math.floor(mulberry32(SEED + counter + i)() * 256));
+  }
+  b[6] = ((b[6] & 0x0f) | 0x40); // версия 4
+  b[8] = ((b[8] & 0x3f) | 0x80); // вариант 1
+
+  return (
+    `${hex(b[0])}${hex(b[1])}${hex(b[2])}${hex(b[3])}-` +
+    `${hex(b[4])}${hex(b[5])}-` +
+    `${hex(b[6])}${hex(b[7])}-` +
+    `${hex(b[8])}${hex(b[9])}-` +
+    `${hex(b[10])}${hex(b[11])}${hex(b[12])}${hex(b[13])}${hex(b[14])}${hex(b[15])}`
+  );
 }
 
 /** Целое [a, b]. */

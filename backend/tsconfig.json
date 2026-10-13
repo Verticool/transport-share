@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "paths": {
+      "@sharing/shared": ["../shared/src/index.ts"],
+      "@sharing/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src", "tests", "vitest.config.ts"]
+}
