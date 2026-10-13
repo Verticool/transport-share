@@ -5,25 +5,16 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { usePark } from '../src/features/map/use-park';
 import { ApiClientError, type ApiClient } from '../src/lib/api';
+import { makeStubClient } from './helpers/stub-client';
 
 const SCOOTERS = [makeScooter({ id: 'a', code: 'DV-001' }), makeScooter({ id: 'b', code: 'DV-002' })];
 
-/** Клиент для тестов: обычный объект, реализующий интерфейс (без кастов и заглушек типов). */
+/** Клиент для тестов: заглушка со всего интерфейса, переопределён только нужный метод. */
 function makeClient(getPark: ApiClient['getPark']): ApiClient {
-  return {
+  return makeStubClient({
     getZone: () => Promise.resolve(SERVICE_ZONE),
     getPark,
-    // Хук парка поездку не трогает, но интерфейс требует эти методы: заглушки честно сообщают,
-    // что вызов пришёл не по адресу, а не молча возвращают пустоту.
-    getActiveBooking: () => Promise.reject(new Error('usePark не запрашивает бронь')),
-    createBooking: () => Promise.reject(new Error('usePark не создаёт бронь')),
-    cancelBooking: () => Promise.reject(new Error('usePark не отменяет бронь')),
-    getActiveRide: () => Promise.reject(new Error('usePark не запрашивает поездку')),
-    startRide: () => Promise.reject(new Error('usePark не начинает поездку')),
-    pauseRide: () => Promise.reject(new Error('usePark не ставит паузу')),
-    resumeRide: () => Promise.reject(new Error('usePark не продолжает поездку')),
-    finishRide: () => Promise.reject(new Error('usePark не завершает поездку')),
-  };
+  });
 }
 
 describe('usePark', () => {

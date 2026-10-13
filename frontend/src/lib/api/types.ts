@@ -1,4 +1,15 @@
-import type { Booking, Iso, Ride, RidePause, Scooter, ServiceZone, Tariff } from '@sharing/shared';
+import type {
+  Booking,
+  EmailMessage,
+  Invoice,
+  Iso,
+  PublicUser,
+  Ride,
+  RidePause,
+  Scooter,
+  ServiceZone,
+  Tariff,
+} from '@sharing/shared';
 
 /** Снимок парка: список самокатов + серверное время (RULES §D: время считаем от сервера). */
 export interface ParkSnapshot {
@@ -55,6 +66,19 @@ export interface ApiClient {
    * проверка на стороне источника данных, интерфейс лишь показывает причину.
    */
   finishRide(rideId: string): Promise<RideSnapshot>;
+
+  /** Вход по email и паролю. Неверные данные — ошибка с кодом `unauthorized`. */
+  login(email: string, password: string): Promise<SessionSnapshot>;
+  /** Выход: токен перестаёт действовать. */
+  logout(token: string): Promise<void>;
+  /** Текущий пользователь по токену — проверка сессии при загрузке приложения. */
+  getMe(token: string): Promise<PublicUser>;
+  /** История поездок пользователя, свежие сверху. */
+  getRides(query: PageQuery, token: string): Promise<Page<Ride>>;
+  /** Счета пользователя, свежие сверху. */
+  getInvoices(token: string): Promise<Invoice[]>;
+  /** Входящие письма (эмуляция почты), свежие сверху. */
+  getEmails(token: string): Promise<EmailMessage[]>;
 }
 
 /** Коды ошибок клиента: интерфейс различает их, чтобы показать понятный текст. */
@@ -63,7 +87,28 @@ export type ApiErrorCode =
   | 'invalid_payload'
   | 'conflict'
   | 'not_found'
-  | 'outside_zone';
+  | 'outside_zone'
+  | 'unauthorized';
+
+/** Сессия: вошедший пользователь и токен, которым подписаны запросы кабинета. */
+export interface SessionSnapshot {
+  user: PublicUser;
+  token: string;
+}
+
+/** Страница списка: столько записей отдал источник и сколько их всего. */
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/** Запрос страницы списка (RULES: разбирается схемой `RidesQuerySchema`). */
+export interface PageQuery {
+  limit: number;
+  offset: number;
+}
 
 /** Ошибка уровня клиента: единый формат для моков и будущего http-клиента. */
 export class ApiClientError extends Error {
