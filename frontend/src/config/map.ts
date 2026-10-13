@@ -15,17 +15,18 @@ export interface Basemap {
   maxZoom: number;
 }
 
-export const BASEMAPS: Basemap[] = [
-  {
-    id: 'arcgis-light-gray',
-    label: 'Светлая',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ',
-    maxZoom: 16,
-  },
-];
+const ARCGIS_LIGHT_GRAY: Basemap = {
+  id: 'arcgis-light-gray',
+  label: 'Светлая',
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ',
+  maxZoom: 16,
+};
 
-export const DEFAULT_BASEMAP_ID = 'arcgis-light-gray';
+export const BASEMAPS: Basemap[] = [ARCGIS_LIGHT_GRAY];
+
+/** Подложка по умолчанию — отдельная константа, а не `BASEMAPS[0]`: так карта не зависит от порядка в реестре. */
+export const DEFAULT_BASEMAP: Basemap = ARCGIS_LIGHT_GRAY;
 
 /** Центр и стартовый зум карты: центр Бишкека, зона обслуживания видна целиком. */
 export const MAP_CENTER: [number, number] = [74.5698, 42.8746];

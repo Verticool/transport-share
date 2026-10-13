@@ -10,6 +10,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // Точный подпуть обязан идти перед корневым алиасом пакета, иначе он «съест» его.
+      '@sharing/shared/testing/factories': fileURLToPath(
+        new URL('../shared/src/testing/factories.ts', import.meta.url),
+      ),
       '@sharing/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
     },
   },
