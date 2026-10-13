@@ -55,7 +55,8 @@
 | S1 | `shared/src/zone.ts` + тесты | ❌ первый заход: 5 красных тестов и 4 ошибки типов → перезапуск; ✅ второй заход принят: tsc 0, 28/28 (`evidence/S1/zone-fail-and-refix.txt`) |
 | S1 | `shared/src/money.ts` + тесты | ✅ принято: tsc 0, 30/30, цены сверены скриптом `npm run check:pricing` (7/7) |
 | S1 | `lint-fix` (55 × `!`) — **воркер упал на зацикливании**, доделал оркестратор | ✅ eslint 0, 85/85 зелёные (`evidence/S1/lint-fix-by-orchestrator.txt`) |
-| S1 | `shared/src/schemas.ts` (zod) + тесты | ⏳ в работе |
+| S1 | `shared/src/schemas.ts` (zod) + тесты | ✅ принято: tsc 0, 59/59 тестов, eslint 0; коммит `40118f8` (`evidence/S1/acceptance-time-zone-money.txt` дополнен) |
+| S1 | `shared/src/sim/` (симулятор) + тесты | ⏳ в работе (`prompts/S1-sim.md`) |
 
 Таблица пополняется по ходу; в `docs/evidence/` лежат сырые выводы, в `prompts/` — задания.
 
