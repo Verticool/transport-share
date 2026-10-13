@@ -8,5 +8,5 @@
       "@sharing/shared/*": ["../shared/src/*"]
     }
   },
-  "include": ["src", "tests", "vitest.config.ts"]
+  "include": ["src", "tests", "scripts", "vitest.config.ts"]
 }

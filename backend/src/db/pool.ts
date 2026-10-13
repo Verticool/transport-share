@@ -1,6 +1,15 @@
-import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
+import { Pool, types, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
 
 import type { AppEnv } from '../config/env';
+
+/**
+ * Крупные целые (`bigint`, `int8`) по умолчанию приходят строкой: `pg` бережёт точность.
+ *
+ * Наши деньги — тыйыны в пределах нескольких миллионов, они точно представимы числом double,
+ * а строки заставляли бы каждую схему строки угадывать тип. Поэтому int8 приводится к числу
+ * ровно в одном месте — здесь, а не в десятке проверок.
+ */
+types.setTypeParser(types.builtins.INT8, (value: string) => Number(value));
 
 /**
  * Пул соединений с PostgreSQL.

@@ -185,5 +185,12 @@ export interface LatLng {
 export interface ApiError {
   code: string;
   message: string;
-  details?: Record<string, unknown>;
+  /**
+   * Подробности ошибки.
+   *
+   * `| undefined` указан явно: при `exactOptionalPropertyTypes` «свойство отсутствует» и «свойство
+   * равно undefined» — разные типы, и без этого схема zod и тип расходились бы, ломая проверку
+   * сообщений на границе (это и обнаружилось при первой же сборке живого сервера).
+   */
+  details?: Record<string, unknown> | undefined;
 }

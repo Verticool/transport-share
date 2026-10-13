@@ -243,13 +243,19 @@ describe('RidesQuerySchema', () => {
     if (result.success) { expect(result.data.limit).toBe(20); expect(result.data.offset).toBe(0); }
   });
   it('limit=101 падает', () => { expect(RidesQuerySchema.safeParse({ limit: 101 }).success).toBe(false); });
-  it('строка "10" — не число, падает (без coerce)', () => {
-    const result = RidesQuerySchema.safeParse({ limit: '10' });
-    expect(result.success).toBe(false);
+  it('строка "10" из параметров запроса приводится к числу', () => {
+    // Параметры строки запроса всегда строки: без приведения `?limit=5` не проходил проверку,
+    // и экран истории поездок получал 400 вместо страницы.
+    const parsed = RidesQuerySchema.parse({ limit: '10', offset: '0' });
+    expect(parsed).toEqual({ limit: 10, offset: 0 });
   });
-});
 
-describe('PaginatedSchema', () => {
+  it('мусор в параметрах запроса отклоняется', () => {
+    expect(RidesQuerySchema.safeParse({ limit: 'abc' }).success).toBe(false);
+    expect(RidesQuerySchema.safeParse({ limit: '0' }).success).toBe(false);
+    expect(RidesQuerySchema.safeParse({ limit: '1000' }).success).toBe(false);
+  });
+
   it('валидная страница проходит', () => {
     const schema = PaginatedSchema(ScooterSchema);
     const result = schema.safeParse({

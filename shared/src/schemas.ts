@@ -185,8 +185,10 @@ export const FinishRideRequestSchema: z.ZodType<{ lat: number; lng: number }> = 
 });
 
 export const RidesQuerySchema: z.ZodType<{ limit: number; offset: number }> = z.object({
-  limit: z.number().int().min(1).max(100).default(20),
-  offset: z.number().int().nonnegative().default(0),
+  // `coerce` — потому что параметры строки запроса всегда приходят строками: без него `?limit=5`
+  // не проходил проверку, и вместо страницы истории клиент получал 400.
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().nonnegative().default(0),
 });
 
 // ─── Фабрика пагинации ────────────────────────────────────────────────────────

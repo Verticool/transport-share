@@ -11,12 +11,13 @@ import { createPool } from './db/pool';
 async function main(): Promise<void> {
   const env = readEnv();
   const pool = createPool(env);
-  // Пул удовлетворяет `HealthDb`: ручкам нужен только `query(sql)`, транзакции — позже (S9).
-  const app = buildApp({ env, db: pool });
+  const bundle = buildApp({ env, pool });
 
   const shutdown = async (signal: string): Promise<void> => {
-    app.log.info({ signal }, 'останов сервиса');
-    await app.close();
+    bundle.app.log.info({ signal }, 'останов сервиса');
+    bundle.simulator.stop();
+    bundle.hub.close();
+    await bundle.app.close();
     await pool.end();
     process.exit(0);
   };
@@ -31,14 +32,22 @@ async function main(): Promise<void> {
     );
     const count = Number(applied.rows[0]?.count ?? '0');
     if (count === 0) {
-      app.log.error('схема не создана: выполните npm run migrate (в compose это делает db-migrate)');
+      bundle.app.log.error('схема не создана: выполните npm run migrate (в compose это делает db-migrate)');
       process.exit(1);
     }
 
-    await app.listen({ port: env.PORT, host: env.HOST });
-    app.log.info({ migrationsApplied: count }, 'сервис запущен');
+    await bundle.app.listen({ port: env.PORT, host: env.HOST });
+
+    // Сокеты подключаются к тому же http-серверу: отдельный порт для ws не нужен.
+    bundle.hub.attach(bundle.app.server);
+    bundle.simulator.start();
+
+    bundle.app.log.info(
+      { migrationsApplied: count, simTickMs: env.SIM_TICK_MS, bookingTickMs: env.BOOKING_TICK_MS },
+      'сервис запущен',
+    );
   } catch (error) {
-    app.log.error({ err: error }, 'не удалось запустить сервис');
+    bundle.app.log.error({ err: error }, 'не удалось запустить сервис');
     await pool.end();
     process.exit(1);
   }

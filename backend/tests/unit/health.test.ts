@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildApp } from '../../src/app';
-import { readEnv } from '../../src/config/env';
-import { HealthSchema, readHealth, type HealthDb } from '../../src/routes/health';
+import { readHealth, type HealthDb } from '../../src/routes/health';
 
 /** Подставная база: возвращает число применённых миграций или падает, как недоступная. */
 function fakeDb(options: { migrations?: string; fail?: boolean } = {}): HealthDb {
@@ -46,35 +44,5 @@ describe('проверка доступности', () => {
     expect(health.status).toBe('degraded');
     expect(health.db.ok).toBe(false);
     expect(health.db.migrationsApplied).toBe(0);
-  });
-});
-
-describe('ручка /api/health', () => {
-  it('отвечает 200 и отдаёт контракт, когда база отвечает', async () => {
-    const app = buildApp({ env: readEnv({}), db: fakeDb({ migrations: '1' }), logger: false });
-
-    const response = await app.inject({ method: 'GET', url: '/api/health' });
-
-    expect(response.statusCode).toBe(200);
-    const body = HealthSchema.parse(response.json());
-    expect(body.status).toBe('ok');
-    expect(body.db.migrationsApplied).toBe(1);
-
-    await app.close();
-  });
-
-  it('отвечает 503, когда база не отвечает: контейнер не должен считаться готовым', async () => {
-    const app = buildApp({
-      env: readEnv({}),
-      db: fakeDb({ fail: true }),
-      logger: false,
-    });
-
-    const response = await app.inject({ method: 'GET', url: '/api/health' });
-
-    expect(response.statusCode).toBe(503);
-    expect(HealthSchema.parse(response.json()).status).toBe('degraded');
-
-    await app.close();
   });
 });

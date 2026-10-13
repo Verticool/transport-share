@@ -124,7 +124,13 @@ export default tseslint.config(
 
   // Скрипты и конфиги: работают с внешним миром (JSON, env) — ослабляем только правило про консоль.
   {
-    files: ['**/*.config.{ts,js,mjs}', 'backend/src/db/migrations/**', 'scripts/**'],
+    files: [
+      '**/*.config.{ts,js,mjs}',
+      'backend/src/db/migrations/**',
+      'scripts/**',
+      // Диагностические сценарии бэкенда: их смысл — печатать состояние в консоль.
+      'backend/scripts/**',
+    ],
     rules: {
       'no-console': 'off',
     },

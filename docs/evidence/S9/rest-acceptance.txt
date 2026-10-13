@@ -1,0 +1,109 @@
+=== S9 · REST + WS + симулятор · 2026-10-13T17:45:08Z ===
+
+--- 1. проверка доступности ---
+{"status":"ok","version":"0.1.0","serverTime":"2026-10-13T17:45:08.305Z","uptimeSeconds":35.354,"db":{"ok":true,"latencyMs":1,"migrationsApplied":2}}
+
+--- 2. вход демонстрационного пользователя ---
+токен получен: eyJhbGciOiJIUzI1NiIsInR5cCI6...
+
+--- 3. парк и зона ---
+самокатов: 40 | seq: 1 | время сервера: 2026-10-13T17:45:08.441Z
+по статусам: {"free":19,"reserved":6,"in_ride":5,"unavailable":10}
+пример: {"id":"a451f6c4-78f1-4c93-a95d-316b2c82c333","code":"SC-001","model":"Ninebot Max G30","status":"free","batteryPct":58,"lat":42.86754250835558,"lng":74.54228969871765,"lastSeenAt":"2026-10-13T11:21:00.000Z","createdAt":"2026-09-13T12:01:40.000Z","updatedAt":"2026-09-13T12:02:40.000Z"}
+зона: Бишкек, центр | точек полигона: 8
+
+--- 4. бронь → поездка → пауза → продолжение → завершение ---
+выбран свободный самокат: SC-001
+бронь: active | действует до 2026-10-13T18:00:08.676Z | id 8d92ee2e-ba89-4ff1-adbc-361e8c63fc7c
+вторая бронь того же самоката (ожидается 409):
+  HTTP 409
+старт поездки: active | тариф: посадка 2500 , езда 600 , пауза 200 KGS
+пауза: paused | открытых пауз: 1
+продолжение: active | пауза закрыта: true
+ждём 3 секунды: симулятор двигает самокат и списывает заряд
+самокат в базе: {"id":"a451f6c4-78f1-4c93-a95d-316b2c82c333","code":"SC-001","model":"Ninebot Max G30","status":"in_ride","batteryPct":58,"lat":42.86754250835558,"lng":74.54228969871765,"lastSeenAt":"2026-10-13T11:21:00.000Z","createdAt":"2026-09-13T12:01:40.000Z","updatedAt":"2026-10-13T17:45:08.909Z"}
+завершение: finished | причина user
+счёт: 3900 | разбор: {"unlockFee":2500,"rideMinutes":2,"rideAmount":1200,"pauseMinutes":1,"pauseAmount":200,"total":3900}
+
+--- 5. счета и письма пользователя ---
+счетов: 9
+самый свежий: {"id":"4a6107bf-a6f6-436b-b980-7929dc1613d4","rideId":"3617fc03-f203-4ded-9890-9f45aee11538","userId":"9af1aa07-73af-4451-b6c4-78f10c93695d","breakdown":{"unlockFee":2500,"rideMinutes":2,"rideAmount":1200,"pauseMinutes":1,"pauseAmount":200,"total":3900},"amount":3900,"currency":"KGS","issuedAt":"2026-10-13T17:45:12.443Z","createdAt":"2026-10-13T17:45:12.443Z"}
+писем: 9
+самое свежее: {"id":"15120266-177a-497b-8bcd-5d665ad7e267","userId":"9af1aa07-73af-4451-b6c4-78f10c93695d","toEmail":"demo@sharing.kg","subject":"Счёт за поездку SC-001","body":"Спасибо за поездку! Итого: 39.00 сом. Время в пути: 2 мин, паузы: 1 мин.","dedupeKey":"invoice:3617fc03-f203-4ded-9890-9f45aee11538","sentAt":"2026-10-13T17:45:12.443Z","createdAt":"2026-10-13T17:45:12.443Z"}
+
+--- 6. доступ без токена и чужие данные ---
+GET /api/bookings/active без токена: HTTP 401
+GET /api/me без токена: HTTP 401
+GET /api/rides?limit=5&offset=0: HTTP 200
+неизвестный маршрут: HTTP 400
+
+--- 7. WebSocket: два подписчика, снапшот, изменения парка в реальном времени ---
+вход выполнен, токен получен
+свободный самокат: SC-001
+подписчик с токеном: снапшот получен = true | самокатов 40, seq 29, своя бронь: нет
+гость без токена: снапшот получен = true | самокатов 40, seq 30, своя бронь: нет
+pong получен: true
+поездка начата: a9dfd6e1-e210-43bc-b92b-f3365e802a30
+движение за 4 с: перемещение ≈ 22 м, заряд 58 % → 58 %
+подписчик с токеном: сообщения — ["snapshot","pong","booking.created","ride.started","park.delta","ride.tick"] | park.delta: 4
+гость без токена: сообщения — ["snapshot","park.delta"] | park.delta: 4
+первое изменение парка: {"id":"a451f6c4-78f1-4c93-a95d-316b2c82c333","status":"in_ride","batteryPct":58,"lat":42.86754945156235,"lng":74.542706800917,"lastSeenAt":"2026-10-13T17:47:47.186Z"}
+поездка завершена, счёт: {"id":"46a61612-3f29-4e65-9724-6a91e23eba85","rideId":"a9dfd6e1-e210-43bc-b92b-f3365e802a30","userId":"9af1aa07-73af-4451-b6c4-78f10c93695d","breakdown":{"unlockFee":2500,"rideMinutes":1,"rideAmount":600,"pauseMinutes":0,"pauseAmount":0,"total":3100},"amount":3100,"currency":"KGS","issuedAt":"2026-10-13T17:47:51.226Z","createdAt":"2026-10-13T17:47:51.226Z"}
+
+--- 8. тесты бэкенда ---
+без базы (то, что от неё не зависит):
+ [2m[90m↓[39m[22m tests/db/api.test.ts [2m([22m[2m24 tests[22m[2m | [22m[33m24 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m tests/db/invariants.test.ts [2m([22m[2m12 tests[22m[2m | [22m[33m12 skipped[39m[2m)[22m
+[2m Test Files [22m [1m[32m5 passed[39m[22m[2m | [22m[33m2 skipped[39m[90m (7)[39m
+[2m      Tests [22m [1m[32m20 passed[39m[22m[2m | [22m[33m36 skipped[39m[90m (56)[39m
+
+с живой базой (включая гарантии схемы, гонку броней, симулятор и WebSocket):
+[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[32m56 passed[39m[22m[90m (56)[39m
+
+--- 9. типы, линтер, тесты общего пакета ---
+backend tsc: exit=0
+frontend tsc: exit=0
+
+E:\Work\transport-sharing\backend\scripts\probe-ws.ts
+   29:23  error  Do not use any type assertions  @typescript-eslint/consistent-type-assertions
+   32:14  error  Do not use any type assertions  @typescript-eslint/consistent-type-assertions
+   77:19  error  Do not use any type assertions  @typescript-eslint/consistent-type-assertions
+   78:16  error  Do not use any type assertions  @typescript-eslint/consistent-type-assertions
+   81:18  error  Do not use any type assertions  @typescript-eslint/consistent-type-assertions
+   83:17  error  Do not use any type assertions  @typescript-eslint/consistent-type-assertions
+  110:20  error  Do not use any type assertions  @typescript-eslint/consistent-type-assertions
+
+✖ 7 problems (7 errors, 0 warnings)
+
+ Test Files  7 passed (7)
+      Tests  190 passed (190)
+
+--- 10. найденные и исправленные дефекты на этой стадии ---
+1. Генератор мок-данных писал идентификаторы 8-6-6-16 (исправлено на S8).
+2. bigint из PostgreSQL приходил строкой, и схема строки падала: тип приведён к числу в одном месте (src/db/pool.ts).
+3. Срок брони считался часами приложения и отличался от reserved_at на 2 мс: теперь обе метки ставит база.
+4. Параметры страницы (limit/offset) приходят строками и не проходили схему: добавлен coerce (общий контракт).
+5. Симулятор запоминал «покой» самоката, пока тот был свободен, и не двигал его в поездке:
+   цель пересчитывается при старте поездки (найдено живой проверкой, а не тестом).
+6. Ошибки тика симулятора глушились: теперь идут в лог приложения.
+7. ApiError.details: тип и zod-схема расходились при exactOptionalPropertyTypes — исправлено в общем пакете.
+
+--- 11. повторная проверка после исправления диагностического скрипта ---
+в первой версии scripts/probe-ws.ts были приведения типов (запрещены рулсетом §F.1) —
+скрипт переписан на zod-схемы, повторный прогон:
+eslint: exit=0
+backend tsc: exit=0
+
+--- 12. повторный живой прогон WebSocket ---
+вход выполнен, токен получен
+свободный самокат: SC-001
+подписчик с токеном: снапшот получен = true | самокатов 40, seq 53, своя бронь: нет
+гость без токена: снапшот получен = true | самокатов 40, seq 55, своя бронь: нет
+pong получен: true
+поездка начата: ac1f7a84-13d5-4bb5-a1ec-f8d68ec51e94
+движение за 4 с: перемещение ≈ 30 м, заряд 58 % → 58 %
+подписчик с токеном: сообщения — ["snapshot","pong","booking.created","ride.started","park.delta","ride.tick"] | park.delta: 5
+гость без токена: сообщения — ["snapshot","park.delta"] | park.delta: 5
+первое изменение парка: {"id":"a451f6c4-78f1-4c93-a95d-316b2c82c333","status":"in_ride","batteryPct":58,"lat":42.86753838344827,"lng":74.54234705737836,"lastSeenAt":"2026-10-13T17:49:32.067Z"}
+поездка завершена, счёт: {"id":"34e069d2-44b6-4249-9983-d5611f0c30ff","rideId":"ac1f7a84-13d5-4bb5-a1ec-f8d68ec51e94","userId":"9af1aa07-73af-4451-b6c4-78f10c93695d","amount":3100,"currency":"KGS","breakdown":{"unlockFee":2500,"rideMinutes":1,"rideAmount":600,"pauseMinutes":0,"pauseAmount":0,"total":3100},"issuedAt":"2026-10-13T17:49:37.104Z","createdAt":"2026-10-13T17:49:37.104Z"}
