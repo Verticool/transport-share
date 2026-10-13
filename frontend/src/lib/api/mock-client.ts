@@ -55,8 +55,6 @@ export interface MockApiClientOptions {
   maxDelayMs?: number;
   /** Состояние мок-сервера: общее по умолчанию, отдельное — в тестах. */
   state?: MockServerState;
-  /** Пользователь, от имени которого работает клиент: два клиента с одним состоянием — это «двое». */
-  userId?: string;
 }
 
 /**
@@ -87,8 +85,30 @@ export interface MockServerState {
   tariff: Tariff;
   /** Выданные токены: токен → идентификатор пользователя. */
   tokens: Map<string, string>;
+  /** Погашенные токены: после выхода токен не должен работать, даже если он самодостаточен. */
+  revoked: Set<string>;
   /** Почта пользователя по его идентификатору: нужна для писем о счёте. */
   emailByUser: Map<string, string>;
+  /** Код самоката по его идентификатору: письма и счета называют самокат «SC-013», а не внутренним id. */
+  scooterCodes: Map<string, string>;
+}
+
+/**
+ * Разбирает идентификатор пользователя из токена.
+ *
+ * Токен устроен как `tk-<идентификатор пользователя>-<момент выдачи>`. Разбирать его, а не искать
+ * в карте выданных, нужно по одной причине: настоящий сервер проверяет токен независимо от того,
+ * помнит ли его процесс. Иначе после перезагрузки страницы сессия из localStorage перестала бы
+ * работать — интерфейс считал бы пользователя вошедшим, а данные отвечали бы «войдите».
+ */
+function userIdFromToken(token: string): string | null {
+  if (!token.startsWith('tk-')) {
+    return null;
+  }
+
+  const rest = token.slice(3);
+  const separator = rest.lastIndexOf('-');
+  return separator > 0 ? rest.slice(0, separator) : null;
 }
 
 export function createMockServerState(
@@ -105,7 +125,9 @@ export function createMockServerState(
     now: options.now ?? (() => Date.now()),
     tariff: options.tariff ?? DEFAULT_TARIFF,
     tokens: new Map<string, string>(),
+    revoked: new Set<string>(),
     emailByUser: new Map<string, string>(),
+    scooterCodes: new Map<string, string>(),
   };
 }
 
@@ -123,24 +145,20 @@ export class MockApiClient implements ApiClient {
   private readonly minDelayMs: number;
   private readonly maxDelayMs: number;
   private readonly state: MockServerState;
-  private readonly userId: string;
-  /** Пользователь вошедшей сессии: после входа операции идут от его имени, а не от демо-пользователя. */
-  private sessionUserId: string | null = null;
 
   constructor(options: MockApiClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? '';
     this.minDelayMs = options.minDelayMs ?? 120;
     this.maxDelayMs = options.maxDelayMs ?? 300;
     this.state = options.state ?? defaultState;
-    this.userId = options.userId ?? 'mock-user';
   }
 
   /**
-   * От чьего имени выполняются операции: вошедший пользователь, иначе демо-пользователь клиента.
-   * Так одна и та же сессия после входа работает со своими бронями и поездками.
+   * От чьeго имени выполняется запрос: пользователя определяет токен, а не настройка клиента.
+   * Так же будет вести себя сервер (S11): у него нет «текущего пользователя» помимо токена.
    */
-  private get currentUserId(): string {
-    return this.sessionUserId ?? this.userId;
+  private async requireUserId(token: string): Promise<string> {
+    return (await this.userByToken(token)).id;
   }
 
   /** Имитация сети: интерфейс должен проверяться вместе с состояниями загрузки, а не мгновенно. */
@@ -202,8 +220,11 @@ export class MockApiClient implements ApiClient {
 
   /** Пользователь по токену: недействительный токен — это отказ в доступе, а не «не найдено». */
   private async userByToken(token: string): Promise<PublicUser> {
-    const userId = this.state.tokens.get(token);
-    if (userId === undefined) {
+    const userId = this.state.revoked.has(token)
+      ? null
+      : (this.state.tokens.get(token) ?? userIdFromToken(token));
+
+    if (userId === null) {
       throw new ApiClientError('unauthorized', 'Нужно войти в аккаунт');
     }
 
@@ -224,6 +245,10 @@ export class MockApiClient implements ApiClient {
     }
 
     const scooters = [...parsed.data].sort((left, right) => left.code.localeCompare(right.code, 'en'));
+    // Коды самокатов запоминаем: они нужны в письмах и счетах, где известен только идентификатор.
+    for (const scooter of scooters) {
+      this.state.scooterCodes.set(scooter.id, scooter.code);
+    }
     return scooters.map((scooter) => {
       const batteryPct = this.state.battery.get(scooter.id) ?? scooter.batteryPct;
       const ride = [...this.state.rides.values()].find(
@@ -266,32 +291,34 @@ export class MockApiClient implements ApiClient {
 
     // Заряд активной поездки пересчитываем и здесь: список парка обязан показывать то же,
     // что и панель поездки, и автофиниш по разряду срабатывает даже без чтения поездки.
-    const active = this.activeRide();
-    if (active !== undefined) {
-      this.drainBattery(active);
+    const active = this.activeRides();
+    for (const ride of active) {
+      this.drainBattery(ride);
     }
 
     return { scooters: await this.loadScooters(), serverTime: this.serverTime() };
   }
 
-  async getActiveBooking(): Promise<BookingSnapshot | null> {
+  async getActiveBooking(token: string): Promise<BookingSnapshot | null> {
     await this.applyDelay();
     this.expireBookings();
+    const userId = await this.requireUserId(token);
 
     for (const booking of this.state.bookings.values()) {
-      if (booking.userId === this.currentUserId && booking.status === 'active') {
+      if (booking.userId === userId && booking.status === 'active') {
         return { booking, serverTime: this.serverTime() };
       }
     }
     return null;
   }
 
-  async createBooking(scooterId: string): Promise<BookingSnapshot> {
+  async createBooking(scooterId: string, token: string): Promise<BookingSnapshot> {
     await this.applyDelay();
     this.expireBookings();
+    const userId = await this.requireUserId(token);
 
     const mine = [...this.state.bookings.values()].find(
-      (booking) => booking.userId === this.currentUserId && booking.status === 'active',
+      (booking) => booking.userId === userId && booking.status === 'active',
     );
     if (mine !== undefined) {
       throw new ApiClientError('conflict', 'У вас уже есть активная бронь');
@@ -313,7 +340,7 @@ export class MockApiClient implements ApiClient {
     const nowMs = this.state.now();
     const booking: Booking = {
       id: `bk-${scooterId}-${nowMs}`,
-      userId: this.currentUserId,
+      userId: userId,
       scooterId,
       status: 'active',
       reservedAt: toIso(nowMs),
@@ -328,13 +355,18 @@ export class MockApiClient implements ApiClient {
     return { booking, serverTime: this.serverTime() };
   }
 
-  async cancelBooking(bookingId: string): Promise<void> {
+  async cancelBooking(bookingId: string, token: string): Promise<void> {
     await this.applyDelay();
     this.expireBookings();
+    const user = await this.userByToken(token);
 
     for (const [scooterId, booking] of this.state.bookings) {
       if (booking.id !== bookingId) {
         continue;
+      }
+      if (booking.userId !== user.id) {
+        // Чужую бронь снять нельзя: это проверка доступа, а не отсутствие записи.
+        throw new ApiClientError('unauthorized', 'Эта бронь оформлена на другого пользователя');
       }
       const nowMs = this.state.now();
       booking.status = 'cancelled';
@@ -350,10 +382,15 @@ export class MockApiClient implements ApiClient {
   // ── Поездки ────────────────────────────────────────────────────────────────────────────────
 
   /** Поездка пользователя, которая ещё идёт (включая паузу). */
-  private activeRide(): Ride | undefined {
+  private activeRide(userId: string): Ride | undefined {
     return [...this.state.rides.values()].find(
-      (ride) => ride.userId === this.currentUserId && ride.status !== 'finished',
+      (ride) => ride.userId === userId && ride.status !== 'finished',
     );
+  }
+
+  /** Все незавершённые поездки: парк разряжается по всем сразу, а не только по своей. */
+  private activeRides(): Ride[] {
+    return [...this.state.rides.values()].filter((ride) => ride.status !== 'finished');
   }
 
   private ridesPauses(rideId: string): RidePause[] {
@@ -366,12 +403,12 @@ export class MockApiClient implements ApiClient {
    * Чужая поездка отдаётся тем же кодом, что и несуществующая: пользователю не нужно знать,
    * что идентификатор угадан верно.
    */
-  private requireRide(rideId: string): Ride {
+  private requireRide(rideId: string, userId: string): Ride {
     const ride = this.state.rides.get(rideId);
     if (ride === undefined) {
       throw new ApiClientError('not_found', 'Поездка не найдена');
     }
-    if (ride.userId !== this.currentUserId) {
+    if (ride.userId !== userId) {
       throw new ApiClientError('not_found', 'Поездка не найдена');
     }
     return ride;
@@ -456,13 +493,14 @@ export class MockApiClient implements ApiClient {
       reason === 'battery_depleted'
         ? ' Поездка завершена автоматически: у самоката закончился заряд.'
         : '';
+    const scooterCode = this.state.scooterCodes.get(ride.scooterId) ?? 'самокате';
     const email: EmailMessage = {
       id: `em-${ride.id}`,
       userId: ride.userId,
       // Адрес известен из входа; на S11 его подставит сервер по идентификатору пользователя.
       toEmail: this.state.emailByUser.get(ride.userId) ?? 'demo@sharing.kg',
-      subject: 'Счёт за поездку на самокате',
-      body: `Спасибо за поездку! Итого: ${formatMinor(breakdown.total, this.state.tariff.currencySymbol)}, время в пути: ${breakdown.rideMinutes} мин, паузы: ${breakdown.pauseMinutes} мин.${reasonNote}`,
+      subject: `Счёт за поездку ${scooterCode}`,
+      body: `Спасибо за поездку! Итого: ${formatMinor(breakdown.total, this.state.tariff.currencySymbol)}. Время в пути: ${breakdown.rideMinutes} мин, паузы: ${breakdown.pauseMinutes} мин.${reasonNote}`,
       dedupeKey,
       sentAt: toIso(nowMs),
       createdAt: toIso(nowMs),
@@ -470,11 +508,12 @@ export class MockApiClient implements ApiClient {
     this.state.emails.push(email);
   }
 
-  async getActiveRide(): Promise<RideSnapshot | null> {
+  async getActiveRide(token: string): Promise<RideSnapshot | null> {
     await this.applyDelay();
     this.expireBookings();
+    const userId = await this.requireUserId(token);
 
-    const ride = this.activeRide();
+    const ride = this.activeRide(userId);
     if (ride === undefined) {
       return null;
     }
@@ -483,21 +522,22 @@ export class MockApiClient implements ApiClient {
     return this.rideSnapshot(ride);
   }
 
-  async startRide(bookingId: string): Promise<RideSnapshot> {
+  async startRide(bookingId: string, token: string): Promise<RideSnapshot> {
     await this.applyDelay();
     this.expireBookings();
+    const userId = await this.requireUserId(token);
 
     const booking = [...this.state.bookings.values()].find((item) => item.id === bookingId);
     if (booking === undefined) {
       throw new ApiClientError('not_found', 'Бронь не найдена — возможно, срок уже истёк');
     }
-    if (booking.userId !== this.currentUserId) {
+    if (booking.userId !== userId) {
       throw new ApiClientError('conflict', 'Эта бронь оформлена на другого пользователя');
     }
     if (booking.status !== 'active') {
       throw new ApiClientError('conflict', 'Бронь уже не действует');
     }
-    if (this.activeRide() !== undefined) {
+    if (this.activeRide(userId) !== undefined) {
       throw new ApiClientError('conflict', 'У вас уже идёт поездка');
     }
 
@@ -509,7 +549,7 @@ export class MockApiClient implements ApiClient {
 
     const ride: Ride = {
       id: `rd-${booking.scooterId}-${nowMs}`,
-      userId: this.currentUserId,
+      userId: userId,
       scooterId: booking.scooterId,
       bookingId: booking.id,
       status: 'active',
@@ -537,10 +577,11 @@ export class MockApiClient implements ApiClient {
     return this.rideSnapshot(ride);
   }
 
-  async pauseRide(rideId: string): Promise<RideSnapshot> {
+  async pauseRide(rideId: string, token: string): Promise<RideSnapshot> {
     await this.applyDelay();
+    const userId = await this.requireUserId(token);
 
-    const ride = this.requireRide(rideId);
+    const ride = this.requireRide(rideId, userId);
     if (ride.status === 'finished') {
       throw new ApiClientError('conflict', 'Поездка уже завершена');
     }
@@ -564,10 +605,11 @@ export class MockApiClient implements ApiClient {
     return this.rideSnapshot(ride);
   }
 
-  async resumeRide(rideId: string): Promise<RideSnapshot> {
+  async resumeRide(rideId: string, token: string): Promise<RideSnapshot> {
     await this.applyDelay();
+    const userId = await this.requireUserId(token);
 
-    const ride = this.requireRide(rideId);
+    const ride = this.requireRide(rideId, userId);
     if (ride.status !== 'paused') {
       throw new ApiClientError('conflict', 'Поездка не на паузе');
     }
@@ -585,10 +627,11 @@ export class MockApiClient implements ApiClient {
     return this.rideSnapshot(ride);
   }
 
-  async finishRide(rideId: string): Promise<RideSnapshot> {
+  async finishRide(rideId: string, token: string): Promise<RideSnapshot> {
     await this.applyDelay();
+    const userId = await this.requireUserId(token);
 
-    const ride = this.requireRide(rideId);
+    const ride = this.requireRide(rideId, userId);
     if (ride.status === 'finished') {
       throw new ApiClientError('conflict', 'Поездка уже завершена');
     }
@@ -627,7 +670,6 @@ export class MockApiClient implements ApiClient {
     const token = `tk-${user.id}-${this.state.now()}`;
     this.state.tokens.set(token, user.id);
     this.state.emailByUser.set(user.id, user.email);
-    this.sessionUserId = user.id;
 
     return { user, token };
   }
@@ -635,7 +677,7 @@ export class MockApiClient implements ApiClient {
   async logout(token: string): Promise<void> {
     await this.applyDelay();
     this.state.tokens.delete(token);
-    this.sessionUserId = null;
+    this.state.revoked.add(token);
   }
 
   async getMe(token: string): Promise<PublicUser> {
@@ -718,5 +760,7 @@ export function resetMockServerState(): void {
   defaultState.invoices.length = 0;
   defaultState.emails.length = 0;
   defaultState.tokens.clear();
+  defaultState.revoked.clear();
   defaultState.emailByUser.clear();
+  defaultState.scooterCodes.clear();
 }

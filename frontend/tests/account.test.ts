@@ -1,4 +1,4 @@
-import { DEFAULT_TARIFF } from '@sharing/shared';
+import { DEFAULT_TARIFF, EmailMessageSchema, InvoiceSchema, RideSchema } from '@sharing/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMockServerState, MockApiClient } from '../src/lib/api/mock-client';
@@ -18,8 +18,8 @@ const DEMO_PASSWORD = 'demo1234';
 function setup() {
   const clock = { current: MOCK_START };
   const state = createMockServerState({ now: () => clock.current });
-  const client = new MockApiClient({ ...fast, state, userId: 'anonymous' });
-  return { client, clock };
+  const client = new MockApiClient({ ...fast, state });
+  return { client, clock, state };
 }
 
 beforeEach(() => {
@@ -80,6 +80,27 @@ describe('вход в аккаунт', () => {
       code: 'unauthorized',
     });
   });
+
+  it('токен работает и после перезагрузки страницы', async () => {
+    const { client } = setup();
+    const { token } = await client.login(DEMO_EMAIL, DEMO_PASSWORD);
+
+    // Перезагрузка страницы для источника данных — это новый процесс: карта выданных токенов пуста,
+    // а сессия берётся из хранилища. Токен должен проверяться сам по себе.
+    const afterReload = new MockApiClient({ ...fast, state: createMockServerState() });
+
+    await expect(afterReload.getMe(token)).resolves.toMatchObject({ email: DEMO_EMAIL });
+  });
+
+  it('погашенный при выходе токен не работает и после перезагрузки', async () => {
+    const { client, state } = setup();
+    const { token } = await client.login(DEMO_EMAIL, DEMO_PASSWORD);
+    await client.logout(token);
+
+    const afterReload = new MockApiClient({ ...fast, state });
+
+    await expect(afterReload.getMe(token)).rejects.toMatchObject({ code: 'unauthorized' });
+  });
 });
 
 describe('история поездок', () => {
@@ -126,9 +147,9 @@ describe('история поездок', () => {
     // а свежие показываются сверху — иначе новая поездка не окажется первой.
     clock.current += 30 * 24 * 60 * 60_000;
 
-    const { booking } = await client.createBooking(free.id);
-    const { ride } = await client.startRide(booking.id);
-    await client.finishRide(ride.id);
+    const { booking } = await client.createBooking(free.id, token);
+    const { ride } = await client.startRide(booking.id, token);
+    await client.finishRide(ride.id, token);
 
     const after = await client.getRides({ limit: 100, offset: 0 }, token);
 
@@ -139,6 +160,35 @@ describe('история поездок', () => {
 });
 
 describe('счета и письма', () => {
+  it('в мок-данных на каждую поездку приходится ровно одно письмо, а суммы счетов сходятся', () => {
+    const rides = RideSchema.array().parse(JSON.parse(readMockFile('rides.json')));
+    const invoices = InvoiceSchema.array().parse(JSON.parse(readMockFile('invoices.json')));
+    const emails = EmailMessageSchema.array().parse(JSON.parse(readMockFile('emails.json')));
+
+    const rideIds = new Set(rides.map((ride) => ride.id));
+
+    // Счёт: разбор обязан сходиться с итогом, а поездка — существовать.
+    for (const invoice of invoices) {
+      expect(rideIds.has(invoice.rideId)).toBe(true);
+      expect(invoice.breakdown.total).toBe(invoice.amount);
+      expect(invoice.breakdown.unlockFee + invoice.breakdown.rideAmount + invoice.breakdown.pauseAmount).toBe(
+        invoice.amount,
+      );
+    }
+
+    // Письмо: одно на поездку, ссылается на свою поездку тем же ключом, что и счёт.
+    const keys = emails.map((email) => email.dedupeKey);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const email of emails) {
+      expect(email.dedupeKey.startsWith('invoice:')).toBe(true);
+      expect(rideIds.has(email.dedupeKey.slice('invoice:'.length))).toBe(true);
+    }
+
+    // Счёт есть у каждой завершённой поездки: иначе пользователь не увидел бы, за что заплатил.
+    const finished = rides.filter((ride) => ride.finishedAt !== null);
+    expect(emails.length).toBe(finished.length);
+  });
+
   it('отдаёт счета пользователя, свежие сверху, с разбором', async () => {
     const { client } = setup();
     const { token } = await client.login(DEMO_EMAIL, DEMO_PASSWORD);
@@ -183,9 +233,9 @@ describe('счета и письма', () => {
       return;
     }
 
-    const { booking } = await client.createBooking(free.id);
-    const { ride } = await client.startRide(booking.id);
-    await client.finishRide(ride.id);
+    const { booking } = await client.createBooking(free.id, token);
+    const { ride } = await client.startRide(booking.id, token);
+    await client.finishRide(ride.id, token);
 
     const emailsAfter = await client.getEmails(token);
     const fresh = emailsAfter.filter(
@@ -194,6 +244,9 @@ describe('счета и письма', () => {
 
     expect(fresh).toHaveLength(1);
     expect(fresh[0]?.dedupeKey).toBe(`invoice:${ride.id}`);
+    // Письмо называет самокат так, как его видит пользователь, а не внутренним идентификатором.
+    expect(fresh[0]?.subject).toBe(`Счёт за поездку ${free.code}`);
+    expect(fresh[0]?.toEmail).toBe(DEMO_EMAIL);
 
     const invoices = await client.getInvoices(token);
     expect(invoices.some((invoice) => invoice.rideId === ride.id)).toBe(true);

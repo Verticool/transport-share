@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useBooking } from '../src/features/booking/use-booking';
 import { createMockServerState, MockApiClient } from '../src/lib/api/mock-client';
 import { parseMockFile, readMockFile, stubFetchRoutes } from './helpers/mock-files';
+import { OTHER_EMAIL, mockUserByEmail, signInAsDemo, tokenFor } from './helpers/session';
 
 /**
  * Бронь проверяется вместе с мок-сервером и с инъекцией часов: 15 минут в тесте не ждём,
@@ -20,10 +21,12 @@ if (freeScooter === undefined) {
   throw new Error('в мок-данных нужен свободный самокат');
 }
 
-function setup(userId = 'u-1') {
+function setup() {
   const clock = { current: MOCK_START };
   const state = createMockServerState({ now: () => clock.current });
-  const client = new MockApiClient({ state, userId, minDelayMs: 0, maxDelayMs: 0 });
+  const client = new MockApiClient({ state, minDelayMs: 0, maxDelayMs: 0 });
+  // Сессия в сторе: хук берёт токен оттуда, как в приложении.
+  const token = signInAsDemo();
 
   const hook = renderHook(() => useBooking(client, { now: () => clock.current, tickMs: TICK_MS }));
 
@@ -31,6 +34,7 @@ function setup(userId = 'u-1') {
     ...hook,
     client,
     clock,
+    token,
     /** Двигает часы источника данных и даёт хуку пересчитать остаток. */
     async advance(minutes: number) {
       clock.current += minutes * 60_000;
@@ -45,6 +49,7 @@ beforeEach(() => {
   stubFetchRoutes({
     '/scooters.json': readMockFile('scooters.json'),
     '/service-zone.json': readMockFile('service-zone.json'),
+    '/users.json': readMockFile('users.json'),
   });
 });
 
@@ -110,12 +115,12 @@ describe('useBooking', () => {
   });
 
   it('снятая по сроку бронь освобождает самокат на стороне данных', async () => {
-    const { client, clock } = setup();
-    await client.createBooking(freeScooter.id);
+    const { client, clock, token } = setup();
+    await client.createBooking(freeScooter.id, token);
 
     clock.current += (BOOKING_TTL_MINUTES + 1) * 60_000;
 
-    expect(await client.getActiveBooking()).toBeNull();
+    expect(await client.getActiveBooking(token)).toBeNull();
     const park = await client.getPark();
     const scooter = park.scooters.find((item) => item.id === freeScooter.id);
     expect(scooter?.status).toBe('free');
@@ -123,10 +128,12 @@ describe('useBooking', () => {
 
   it('показывает отказ, если самокат заняли первым', async () => {
     const state = createMockServerState({ now: () => MOCK_START });
-    const other = new MockApiClient({ state, userId: 'u-2', minDelayMs: 0, maxDelayMs: 0 });
-    await other.createBooking(freeScooter.id);
+    // Второй пользователь со своим токеном занимает самокат первым.
+    const other = new MockApiClient({ state, minDelayMs: 0, maxDelayMs: 0 });
+    await other.createBooking(freeScooter.id, tokenFor(mockUserByEmail(OTHER_EMAIL)));
 
-    const mine = new MockApiClient({ state, userId: 'u-1', minDelayMs: 0, maxDelayMs: 0 });
+    signInAsDemo();
+    const mine = new MockApiClient({ state, minDelayMs: 0, maxDelayMs: 0 });
     const { result } = renderHook(() => useBooking(mine, { now: () => MOCK_START, tickMs: TICK_MS }));
 
     await act(async () => {

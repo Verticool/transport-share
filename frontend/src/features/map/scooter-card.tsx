@@ -1,5 +1,6 @@
 import type { Scooter } from '@sharing/shared';
 import { X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -15,6 +16,8 @@ export interface ScooterCardProps {
   busy: boolean;
   /** Текст ошибки, если бронь не удалась (например, самокат заняли первым). */
   error: string | null;
+  /** Пользователь не вошёл: бронь принадлежит аккаунту, поэтому вместо кнопки — переход на вход. */
+  needsAuth: boolean;
   onBook: (scooterId: string) => void;
   onClose: () => void;
 }
@@ -25,7 +28,7 @@ export interface ScooterCardProps {
  * Кнопка «Забронировать» активна только для свободного самоката; для остальных показывается
  * причина, по которой бронь невозможна, — пользователю не нужно догадываться, почему кнопка серая.
  */
-export function ScooterCard({ scooter, busy, error, onBook, onClose }: ScooterCardProps) {
+export function ScooterCard({ scooter, busy, error, needsAuth, onBook, onClose }: ScooterCardProps) {
   const info = SCOOTER_STATUS_INFO[scooter.status];
   const bookable = scooter.status === 'free';
 
@@ -63,9 +66,15 @@ export function ScooterCard({ scooter, busy, error, onBook, onClose }: ScooterCa
           </p>
         )}
 
-        <Button type="button" onClick={() => onBook(scooter.id)} disabled={!bookable || busy}>
-          Забронировать
-        </Button>
+        {needsAuth ? (
+          <Button asChild>
+            <Link to="/login">Войти, чтобы забронировать</Link>
+          </Button>
+        ) : (
+          <Button type="button" onClick={() => onBook(scooter.id)} disabled={!bookable || busy}>
+            Забронировать
+          </Button>
+        )}
 
         {!bookable && info.hint !== null && (
           <p className="text-xs text-muted-foreground">{info.hint}</p>

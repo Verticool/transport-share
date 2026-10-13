@@ -43,29 +43,29 @@ export interface ApiClient {
   /** Парк: все самокаты со статусами и зарядом. */
   getPark(): Promise<ParkSnapshot>;
 
-  /** Текущая активная бронь пользователя, если она есть. */
-  getActiveBooking(): Promise<BookingSnapshot | null>;
+  /** Текущая активная бронь пользователя, если она есть. Токен обязателен: владельца определяет сессия. */
+  getActiveBooking(token: string): Promise<BookingSnapshot | null>;
   /**
    * Забронировать самокат. Если самокат уже занят другим пользователем — ошибка с кодом `conflict`:
    * правило «один самокат — одна бронь» проверяет источник данных, а не интерфейс.
    */
-  createBooking(scooterId: string): Promise<BookingSnapshot>;
+  createBooking(scooterId: string, token: string): Promise<BookingSnapshot>;
   /** Снять бронь (пользователь передумал): самокат снова свободен. */
-  cancelBooking(bookingId: string): Promise<void>;
+  cancelBooking(bookingId: string, token: string): Promise<void>;
 
   /** Текущая поездка пользователя (включая паузу), если она идёт. */
-  getActiveRide(): Promise<RideSnapshot | null>;
+  getActiveRide(token: string): Promise<RideSnapshot | null>;
   /** Начать поездку из активной брони: бронь расходуется, самокат переходит в «в поездке». */
-  startRide(bookingId: string): Promise<RideSnapshot>;
+  startRide(bookingId: string, token: string): Promise<RideSnapshot>;
   /** Поставить поездку на паузу: время паузы тарифицируется отдельно. */
-  pauseRide(rideId: string): Promise<RideSnapshot>;
+  pauseRide(rideId: string, token: string): Promise<RideSnapshot>;
   /** Продолжить поездку после паузы. */
-  resumeRide(rideId: string): Promise<RideSnapshot>;
+  resumeRide(rideId: string, token: string): Promise<RideSnapshot>;
   /**
    * Завершить поездку. Если самокат вне зоны обслуживания — ошибка с кодом `outside_zone`:
    * проверка на стороне источника данных, интерфейс лишь показывает причину.
    */
-  finishRide(rideId: string): Promise<RideSnapshot>;
+  finishRide(rideId: string, token: string): Promise<RideSnapshot>;
 
   /** Вход по email и паролю. Неверные данные — ошибка с кодом `unauthorized`. */
   login(email: string, password: string): Promise<SessionSnapshot>;

@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 
 import { ApiClientError, createApiClient, type ApiClient, type RideSnapshot } from '../../lib/api';
+import { useSessionStore } from '../../stores/session';
 
 /** Как часто обновляется отсчёт и сумма. Секунда — предел, который виден пользователю. */
 const TICK_MS = 1000;
@@ -60,6 +61,8 @@ export interface UseRideOptions {
  */
 export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideState {
   const [clientInstance] = useState<ApiClient>(() => client ?? createApiClient());
+  // Поездка принадлежит пользователю: источник данных определяет владельца по токену.
+  const token = useSessionStore((state) => state.token);
   const [clock] = useState(() => ({
     now: options.now ?? (() => Date.now()),
     tickMs: options.tickMs ?? TICK_MS,
@@ -91,8 +94,13 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
 
   /** Забирает состояние поездки. Ошибка сети не сбрасывает поездку — только помечает связь как потерянную. */
   const refresh = useCallback(async (): Promise<void> => {
+    if (token === null) {
+      applySnapshot(null);
+      return;
+    }
+
     try {
-      const snapshot = await clientInstance.getActiveRide();
+      const snapshot = await clientInstance.getActiveRide(token);
       // Поездку закрыл источник данных (заряд, простой) — принимаем это как факт.
       applySnapshot(snapshot);
       setOffline(false);
@@ -103,7 +111,7 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
       }
       setError(caught instanceof ApiClientError ? caught.message : 'Не удалось получить поездку');
     }
-  }, [applySnapshot, clientInstance]);
+  }, [applySnapshot, clientInstance, token]);
 
   // Опрос внешнего источника данных из эффекта — это и есть работа с внешней системой:
   // данные приходят по сети, а не из React, поэтому состояние меняет ответ сервера.
@@ -177,31 +185,36 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
   );
 
   const start = useCallback(
-    (bookingId: string) =>
-      runAction(() => clientInstance.startRide(bookingId), 'Не удалось начать поездку'),
-    [runAction, clientInstance],
+    (bookingId: string) => {
+      if (token === null) {
+        setError('Войдите, чтобы начать поездку');
+        return Promise.resolve();
+      }
+      return runAction(() => clientInstance.startRide(bookingId, token), 'Не удалось начать поездку');
+    },
+    [runAction, clientInstance, token],
   );
 
   const pause = useCallback(() => {
-    if (ride === null) {
+    if (ride === null || token === null) {
       return Promise.resolve();
     }
-    return runAction(() => clientInstance.pauseRide(ride.id), 'Не удалось поставить паузу');
-  }, [runAction, clientInstance, ride]);
+    return runAction(() => clientInstance.pauseRide(ride.id, token), 'Не удалось поставить паузу');
+  }, [runAction, clientInstance, ride, token]);
 
   const resume = useCallback(() => {
-    if (ride === null) {
+    if (ride === null || token === null) {
       return Promise.resolve();
     }
-    return runAction(() => clientInstance.resumeRide(ride.id), 'Не удалось продолжить поездку');
-  }, [runAction, clientInstance, ride]);
+    return runAction(() => clientInstance.resumeRide(ride.id, token), 'Не удалось продолжить поездку');
+  }, [runAction, clientInstance, ride, token]);
 
   const finish = useCallback(() => {
-    if (ride === null) {
+    if (ride === null || token === null) {
       return Promise.resolve();
     }
-    return runAction(() => clientInstance.finishRide(ride.id), 'Не удалось завершить поездку');
-  }, [runAction, clientInstance, ride]);
+    return runAction(() => clientInstance.finishRide(ride.id, token), 'Не удалось завершить поездку');
+  }, [runAction, clientInstance, ride, token]);
 
   return {
     ride,

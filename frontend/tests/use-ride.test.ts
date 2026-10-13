@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRide } from '../src/features/ride/use-ride';
 import { createMockServerState, MockApiClient } from '../src/lib/api/mock-client';
 import { readMockFile, stubFetchRoutes } from './helpers/mock-files';
+import { signInAsDemo } from './helpers/session';
 
 /**
  * Поездка в интерфейсе: время, минуты, сумма. Часы источника данных инъектируются, поэтому
@@ -31,12 +32,15 @@ const SCOOTER = {
 function setup() {
   const clock = { current: MOCK_START };
   const state = createMockServerState({ now: () => clock.current });
-  const client = new MockApiClient({ ...fast, state, userId: 'u-1' });
+  const client = new MockApiClient({ ...fast, state });
+  // Сессия в сторе: хук берёт токен оттуда, как в приложении.
+  const token = signInAsDemo();
   const hook = renderHook(() => useRide(client, { now: () => clock.current, tickMs: TICK_MS }));
 
   return {
     ...hook,
     client,
+    token,
     async advance(minutes: number) {
       clock.current += minutes * 60_000;
       await act(async () => {
@@ -50,6 +54,7 @@ function routeScooter(lat: number, lng: number): Record<string, string> {
   return {
     '/scooters.json': JSON.stringify([{ ...SCOOTER, lat, lng }]),
     '/service-zone.json': readMockFile('service-zone.json'),
+    '/users.json': readMockFile('users.json'),
   };
 }
 
@@ -62,8 +67,12 @@ afterEach(() => {
 });
 
 /** Бронирует самокат и начинает поездку через хук — типовое начало сценария. */
-async function beginRide(result: { current: ReturnType<typeof useRide> }, client: MockApiClient) {
-  const { booking } = await client.createBooking(SCOOTER.id);
+async function beginRide(
+  result: { current: ReturnType<typeof useRide> },
+  client: MockApiClient,
+  token: string,
+) {
+  const { booking } = await client.createBooking(SCOOTER.id, token);
   await act(async () => {
     await result.current.start(booking.id);
   });
@@ -81,8 +90,8 @@ describe('useRide', () => {
   });
 
   it('начинает поездку и сразу показывает посадку и первую минуту', async () => {
-    const { result, client } = setup();
-    await beginRide(result, client);
+    const { result, client, token } = setup();
+    await beginRide(result, client, token);
 
     expect(result.current.ride?.status).toBe('active');
     // Минута начисляется с первой секунды (в счёте нет дробных минут), поэтому сразу видно
@@ -92,8 +101,8 @@ describe('useRide', () => {
   });
 
   it('считает сумму по минутам езды', async () => {
-    const { result, client, advance } = setup();
-    await beginRide(result, client);
+    const { result, client, token, advance } = setup();
+    await beginRide(result, client, token);
 
     await advance(5);
 
@@ -103,8 +112,8 @@ describe('useRide', () => {
   });
 
   it('тарифицирует паузу по своему тарифу и не считает её ездой', async () => {
-    const { result, client, advance } = setup();
-    await beginRide(result, client);
+    const { result, client, token, advance } = setup();
+    await beginRide(result, client, token);
     await advance(4);
 
     await act(async () => {
@@ -128,8 +137,8 @@ describe('useRide', () => {
   });
 
   it('после завершения показывает итоговую сумму', async () => {
-    const { result, client, advance } = setup();
-    await beginRide(result, client);
+    const { result, client, token, advance } = setup();
+    await beginRide(result, client, token);
     await advance(7);
 
     await act(async () => {
@@ -143,8 +152,8 @@ describe('useRide', () => {
   });
 
   it('отказывает в завершении вне зоны и объясняет причину', async () => {
-    const { result, client } = setup();
-    await beginRide(result, client);
+    const { result, client, token } = setup();
+    await beginRide(result, client, token);
 
     // Самокат «уехал» за пределы зоны: сервер обязан отказать.
     stubFetchRoutes(routeScooter(43.5, 74.0));
@@ -158,8 +167,8 @@ describe('useRide', () => {
   });
 
   it('при потере связи поездка продолжается, а состояние помечается как офлайн', async () => {
-    const { result, client, advance } = setup();
-    await beginRide(result, client);
+    const { result, client, token, advance } = setup();
+    await beginRide(result, client, token);
     await advance(2);
 
     const rideIdBefore = result.current.ride?.id;

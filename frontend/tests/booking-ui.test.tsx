@@ -65,6 +65,7 @@ describe('ScooterCard', () => {
       scooter: makeScooter({ id: 's-1', code: 'SC-005', status: 'free', batteryPct: 88 }),
       busy: false,
       error: null,
+      needsAuth: false,
       onBook: vi.fn(),
       onClose: vi.fn(),
       ...overrides,

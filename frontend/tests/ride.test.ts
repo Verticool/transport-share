@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMockServerState, MockApiClient } from '../src/lib/api/mock-client';
 import { readMockFile, stubFetchRoutes } from './helpers/mock-files';
+import { DEMO_EMAIL, mockUserByEmail, tokenFor } from './helpers/session';
 
 /**
  * Поездка проверяется на мок-сервере: он ведёт время, паузы, заряд и решает, можно ли завершить
@@ -20,8 +21,10 @@ const testScooter = makeScooter({ id: 's-1', code: 'SC-001', batteryPct: 80, lat
 function setup() {
   const clock = { current: MOCK_START };
   const state = createMockServerState({ now: () => clock.current });
-  const client = new MockApiClient({ ...fast, state, userId: 'u-1' });
+  const client = new MockApiClient({ ...fast, state });
+  const token = tokenFor(mockUserByEmail(DEMO_EMAIL));
   return {
+    token,
     client,
     clock,
     advanceMinutes(minutes: number) {
@@ -35,6 +38,7 @@ function scootersRoute(lat: number, lng: number): Record<string, string> {
   return {
     '/scooters.json': JSON.stringify([{ ...testScooter, lat, lng }]),
     '/service-zone.json': readMockFile('service-zone.json'),
+    '/users.json': readMockFile('users.json'),
   };
 }
 
@@ -47,73 +51,73 @@ afterEach(() => {
 });
 
 /** Бронирует самокат и начинает поездку — общее начало большинства сценариев. */
-async function startRide(client: MockApiClient) {
-  const { booking } = await client.createBooking(testScooter.id);
-  return client.startRide(booking.id);
+async function startRide(client: MockApiClient, token: string) {
+  const { booking } = await client.createBooking(testScooter.id, token);
+  return client.startRide(booking.id, token);
 }
 
 describe('поездка на мок-сервере', () => {
   it('начинается из брони: бронь расходуется, самокат переходит в поездку', async () => {
-    const { client } = setup();
-    const snapshot = await startRide(client);
+    const { client, token } = setup();
+    const snapshot = await startRide(client, token);
 
     expect(snapshot.ride.status).toBe('active');
     expect(snapshot.ride.startedAt).toBe(snapshot.serverTime);
     expect(snapshot.pauses).toEqual([]);
-    expect(await client.getActiveBooking()).toBeNull();
+    expect(await client.getActiveBooking(token)).toBeNull();
 
     const park = await client.getPark();
     expect(park.scooters[0]?.status).toBe('in_ride');
   });
 
   it('отдаёт тариф вместе с поездкой: цены интерфейсу не принадлежат', async () => {
-    const { client } = setup();
-    const snapshot = await startRide(client);
+    const { client, token } = setup();
+    const snapshot = await startRide(client, token);
 
     expect(snapshot.tariff).toEqual(DEFAULT_TARIFF);
   });
 
   it('не даёт начать поездку без брони', async () => {
-    const { client } = setup();
+    const { client, token } = setup();
 
-    await expect(client.startRide('bk-нет')).rejects.toMatchObject({ code: 'not_found' });
+    await expect(client.startRide('bk-нет', token)).rejects.toMatchObject({ code: 'not_found' });
   });
 
   it('пауза и продолжение: пауза открывается и закрывается', async () => {
-    const { client, advanceMinutes } = setup();
-    const { ride } = await startRide(client);
+    const { client, token, advanceMinutes } = setup();
+    const { ride } = await startRide(client, token);
 
-    const paused = await client.pauseRide(ride.id);
+    const paused = await client.pauseRide(ride.id, token);
     expect(paused.ride.status).toBe('paused');
     expect(paused.pauses).toHaveLength(1);
     expect(paused.pauses[0]?.endedAt).toBeNull();
 
     advanceMinutes(3);
 
-    const resumed = await client.resumeRide(ride.id);
+    const resumed = await client.resumeRide(ride.id, token);
     expect(resumed.ride.status).toBe('active');
     expect(resumed.pauses[0]?.endedAt).toBe(resumed.serverTime);
   });
 
   it('не даёт поставить на паузу дважды', async () => {
-    const { client } = setup();
-    const { ride } = await startRide(client);
-    await client.pauseRide(ride.id);
+    const { client, token } = setup();
+    const { ride } = await startRide(client, token);
+    await client.pauseRide(ride.id, token);
 
-    await expect(client.pauseRide(ride.id)).rejects.toMatchObject({ code: 'conflict' });
+    await expect(client.pauseRide(ride.id, token)).rejects.toMatchObject({ code: 'conflict' });
   });
 
   it('тарифицирует езду и паузу по своим тарифам', async () => {
-    const { client, clock, advanceMinutes } = setup();
-    const { ride } = await startRide(client);
+    const { client, token, clock, advanceMinutes } = setup();
+    const { ride } = await startRide(client, token);
 
     advanceMinutes(10);
-    await client.pauseRide(ride.id);
+    await client.pauseRide(ride.id, token);
 
     advanceMinutes(5);
-    await client.resumeRide(ride.id);
+    await client.resumeRide(ride.id, token);
 
-    const snapshot = await client.getActiveRide();
+    const snapshot = await client.getActiveRide(token);
     expect(snapshot).not.toBeNull();
     if (snapshot === null) {
       return;
@@ -128,48 +132,48 @@ describe('поездка на мок-сервере', () => {
   });
 
   it('завершается и возвращает самокат в парк', async () => {
-    const { client, advanceMinutes } = setup();
-    const { ride } = await startRide(client);
+    const { client, token, advanceMinutes } = setup();
+    const { ride } = await startRide(client, token);
     advanceMinutes(7);
 
-    const finished = await client.finishRide(ride.id);
+    const finished = await client.finishRide(ride.id, token);
 
     expect(finished.ride.status).toBe('finished');
     expect(finished.ride.endReason).toBe('user');
     expect(finished.ride.totalAmount).toBe(2500 + 7 * 600);
-    expect(await client.getActiveRide()).toBeNull();
+    expect(await client.getActiveRide(token)).toBeNull();
 
     const park = await client.getPark();
     expect(park.scooters[0]?.status).toBe('free');
   });
 
   it('не даёт завершить поездку вне зоны обслуживания', async () => {
-    const { client } = setup();
-    const { ride } = await startRide(client);
+    const { client, token } = setup();
+    const { ride } = await startRide(client, token);
 
     // Самокат «уехал» за пределы зоны: сервер обязан отказать в завершении.
     stubFetchRoutes(scootersRoute(43.5, 74.0));
 
-    await expect(client.finishRide(ride.id)).rejects.toMatchObject({ code: 'outside_zone' });
-    expect((await client.getActiveRide())?.ride.status).toBe('active');
+    await expect(client.finishRide(ride.id, token)).rejects.toMatchObject({ code: 'outside_zone' });
+    expect((await client.getActiveRide(token))?.ride.status).toBe('active');
   });
 
   it('не даёт завершить уже завершённую поездку', async () => {
-    const { client } = setup();
-    const { ride } = await startRide(client);
-    await client.finishRide(ride.id);
+    const { client, token } = setup();
+    const { ride } = await startRide(client, token);
+    await client.finishRide(ride.id, token);
 
-    await expect(client.finishRide(ride.id)).rejects.toMatchObject({ code: 'conflict' });
+    await expect(client.finishRide(ride.id, token)).rejects.toMatchObject({ code: 'conflict' });
   });
 
   it('завершает поездку сама, когда кончился заряд, с причиной battery_depleted', async () => {
-    const { client, advanceMinutes } = setup();
-    await startRide(client);
+    const { client, token, advanceMinutes } = setup();
+    await startRide(client, token);
 
     // Езда разряжает батарею на 1 % в минуту: 80 % хватает на 80 минут.
     advanceMinutes(81);
 
-    const snapshot = await client.getActiveRide();
+    const snapshot = await client.getActiveRide(token);
     expect(snapshot).not.toBeNull();
     if (snapshot === null) {
       return;

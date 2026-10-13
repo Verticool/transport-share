@@ -10,6 +10,7 @@ import { MapCanvas } from './map-canvas';
 import { ParkPanel } from './park-panel';
 import { ScooterCard } from './scooter-card';
 import { usePark } from './use-park';
+import { useSessionStore } from '../../stores/session';
 
 /**
  * Экран карты: слева карта парка, справа панель — поездка, бронь или список самокатов.
@@ -31,6 +32,7 @@ export function MapPage() {
     refresh: refreshBooking,
   } = useBooking();
   const ride = useRide();
+  const token = useSessionStore((state) => state.token);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   /**
@@ -128,6 +130,7 @@ export function MapPage() {
             scooter={selected}
             busy={bookingBusy}
             error={bookingError}
+            needsAuth={token === null}
             onBook={(scooterId) => {
               void book(scooterId);
             }}

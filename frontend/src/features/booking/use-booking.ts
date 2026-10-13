@@ -2,6 +2,7 @@ import { BOOKING_NOTIFY_MINUTES, type Booking } from '@sharing/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiClientError, createApiClient, type ApiClient } from '../../lib/api';
+import { useSessionStore } from '../../stores/session';
 
 /** Через сколько миллисекунд обновляется отсчёт. Секунда — предел точности, который виден глазу. */
 const TICK_MS = 1000;
@@ -37,6 +38,9 @@ export interface UseBookingOptions {
  */
 export function useBooking(client?: ApiClient, options: UseBookingOptions = {}): BookingState {
   const clientRef = useRef<ApiClient>(client ?? createApiClient());
+  // Бронь принадлежит пользователю: источник данных определяет владельца по токену, поэтому
+  // до входа запрашивать нечего — экран покажет «войдите».
+  const token = useSessionStore((state) => state.token);
   // Часы и период тика фиксируются один раз: иначе новые стрелочные функции на каждом рендере
   // заставляли бы пересобираться эффекты и заново поднимать таймер. Ленивая инициализация
   // состояния (не ref) — так эти значения доступны при рендере и остаются неизменными.
@@ -66,17 +70,25 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
   );
 
   const refresh = useCallback(async (): Promise<void> => {
+    if (token === null) {
+      applySnapshot(null);
+      setLoading(false);
+      return;
+    }
+
     try {
-      applySnapshot(await clientRef.current.getActiveBooking());
+      applySnapshot(await clientRef.current.getActiveBooking(token));
       setError(null);
     } catch (caught) {
       setError(caught instanceof ApiClientError ? caught.message : 'Не удалось получить бронь');
     } finally {
       setLoading(false);
     }
-  }, [applySnapshot]);
+  }, [applySnapshot, token]);
 
   useEffect(() => {
+    // Опрос внешнего источника данных: состояние меняет ответ «сервера», а не React.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh, attempt]);
 
@@ -99,15 +111,22 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
   // Срок вышел — спрашиваем источник данных: он снимет бронь и отдаст самокат в парк.
   useEffect(() => {
     if (booking !== null && remainingMs === 0) {
+      // Срок вышел — спрашиваем источник данных, он снимет бронь и вернёт самокат в парк.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void refresh();
     }
   }, [booking, remainingMs, refresh]);
 
   const book = useCallback(
     async (scooterId: string): Promise<void> => {
+      if (token === null) {
+        setError('Войдите, чтобы забронировать самокат');
+        return;
+      }
+
       setLoading(true);
       try {
-        applySnapshot(await clientRef.current.createBooking(scooterId));
+        applySnapshot(await clientRef.current.createBooking(scooterId, token));
         setError(null);
       } catch (caught) {
         setError(caught instanceof ApiClientError ? caught.message : 'Не удалось забронировать');
@@ -115,17 +134,17 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
         setLoading(false);
       }
     },
-    [applySnapshot],
+    [applySnapshot, token],
   );
 
   const cancel = useCallback(async (): Promise<void> => {
     const current = booking;
-    if (current === null) {
+    if (current === null || token === null) {
       return;
     }
     setLoading(true);
     try {
-      await clientRef.current.cancelBooking(current.id);
+      await clientRef.current.cancelBooking(current.id, token);
       applySnapshot(null);
       setError(null);
     } catch (caught) {
@@ -133,7 +152,7 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
     } finally {
       setLoading(false);
     }
-  }, [applySnapshot, booking]);
+  }, [applySnapshot, booking, token]);
 
   return {
     booking,
