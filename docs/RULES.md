@@ -8,9 +8,9 @@
 | # | Требование | Как выполняем |
 |---|---|---|
 | A1 | Клиент-серверный продукт: отдельный backend и отдельный frontend, общение по сети | 3 контейнера: `frontend` (nginx+статика), `backend` (Fastify), `db` (Postgres). Фронт общается с бэком только по HTTP/WS |
-| A2 | Backend: Python/Go/Node.js (предпочтительно) | Node.js 22 LTS + TypeScript. Обоснование — `docs/ARCHITECTURE.md §2` |
-| A3 | Frontend: Vue или React | React 19 + Vite 8 + TypeScript |
-| A4 | Хранилище: реляционная СУБД, предпочтительно PostgreSQL | PostgreSQL 17 (контейнер), доступ через `pg`, без ORM |
+| A2 | Backend: Python/Go/Node.js (предпочтительно) | **Выбран Node.js 22 LTS + TypeScript + Fastify 5.** Выбор и отклонённые альтернативы — `docs/DECISIONS.md` ADR-002. Python/Go в проекте не используются |
+| A3 | Frontend: Vue или React | **Выбран React 19 + Vite 8 + TypeScript.** Vue не используется (ADR-001) |
+| A4 | Хранилище: реляционная СУБД, предпочтительно PostgreSQL | **Выбран PostgreSQL 17**, доступ через `pg`, без ORM (ADR-003) |
 | A5 | Учётные записи: на наше усмотрение | Логин по email + пароль (bcryptjs), сессия на JWT (access в memory + refresh в httpOnly cookie). Без регистрации смотреть карту можно — бронь требует входа |
 | A6 | Промпты / лог решений сдаются вместе с кодом | `docs/DECISIONS.md` (ADR по каждому выбору), `docs/AI_USAGE.md` + `prompts/` (сырые задания сабагентам) |
 | A7 | Использование AI-агентов ожидается, скрывать не нужно | Прямо описано в `docs/AI_USAGE.md`: какая модель, какие задачи, где оркестратор, где локальный воркер |
@@ -39,7 +39,7 @@
 
 | # | Правило | Причина |
 |---|---|---|
-| C1 | Никакого Redis, Prisma, GraphQL, очередей, k8s, микросервисов | Проект локальный, стадиальный; лишний рантайм = лишние точки отказа |
+| C1 | Стек заморожен списком из §E; любая новая зависимость — только с записью ADR | Проект локальный, стадиальный; лишний рантайм = лишние точки отказа |
 | C2 | Модули выбираются по принципу «нужен для требования» | Каждая зависимость в `docs/DECISIONS.md` с причиной и альтернативой |
 | C3 | Временные метки обязательны | См. §D |
 | C4 | Деньги — только целые числа в минорных единицах (тыйын, 1/100 сома) | `float` недопустим ни в БД (`integer`/`bigint`), ни в TS |
@@ -61,3 +61,149 @@
 4. **WS**: у каждого сообщения `seq` (монотонный счётчик) и `sent_at`; после реконнекта клиент запрашивает снапшот и сравнивает `seq`, чтобы не применить устаревшее сообщение.
 5. **Фронт**: единый `useServerClock()` хранит `offset = server_time - Date.now()` и отдаёт «серверное сейчас»; прямые `Date.now()` в расчётах таймеров запрещены (кроме тестов).
 6. **Тесты**: у каждой проверки таймингов — инъекция часов (`Clock` с `now()`), реальные таймеры в тестах не ждём; отдельный тест на дрейф `server_time` ±30 с.
+
+## E. Стек проекта: что разрешено и что запрещено
+
+Список закрытый. Разрешено ровно то, что ниже; всё остальное считается отброшенным — не добавлять,
+не предлагать в задачах воркеру, не тянуть «на всякий случай». Расширение списка — только через
+новую запись в `docs/DECISIONS.md` (ADR) с причиной и отклонёнными альтернативами.
+
+### E.1 Разрешённый стек по слоям
+
+| Слой | Разрешено (конкретные версии фиксируются в `package.json` при создании стадии) |
+|---|---|
+| Язык | TypeScript 7 (strict, `moduleResolution: bundler`, `verbatimModuleSyntax`), Node.js 22 LTS |
+| Фронтенд-каркас | React 19, React DOM 19, Vite 8, `@vitejs/plugin-react` |
+| Стили и UI-кит | Tailwind CSS 4 (`@tailwindcss/vite`), shadcn/ui (Radix-примитивы), `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react` (иконки) |
+| Карта | OpenLayers (`ol`) напрямую, свои хуки-обёртки; подложка — XYZ ArcGIS Light Gray Canvas |
+| Состояние и роутинг | `zustand` 5, `react-router` 7 |
+| Валидация контракта | `zod` 4 (общий пакет `shared`, используется и фронтом, и бэком) |
+| Бэкенд | Fastify 5, `@fastify/websocket` (+ `ws`), `pg` 8, `bcryptjs`, `jsonwebtoken`, `tsx` (запуск TS), `node --env-file` |
+| БД | PostgreSQL 17 в контейнере, схема — собственные SQL-миграции + раннер, без ORM |
+| Логи | `pino` (штатный логгер Fastify), человекочитаемый вывод в dev через `pino-pretty` |
+| Тесты | `vitest` 5 (все пакеты), `@testing-library/react` + `jsdom` (компоненты), `app.inject()` (ручки), `@playwright/test` с `channel: 'msedge'` (e2e) |
+| Линт и формат | ESLint 10 (flat config) + `typescript-eslint` + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` + Prettier |
+| Монорепо | npm workspaces (`shared`, `frontend`, `backend`), один корневой `package.json` |
+| Инфраструктура | Docker Compose, образы `node:22-alpine`, `nginx:alpine`, `postgres:17-alpine`; том `db_data`; healthcheck |
+| Git | ветка `main`, Conventional Commits на английском, remote `Verticool/transport-share` |
+
+### E.2 Запрещено (отброшено, с причиной)
+
+| Запрещено | Причина |
+|---|---|
+| **Vue / Nuxt, Svelte, Angular** | Выбран React (ADR-001); второй фреймворк в проекте не появится |
+| **Python, Go, FastAPI, NestJS, Express** | Выбран Node + Fastify (ADR-002); NestJS — DI-обвязка избыточна для 15 ручек, Express отброшен на этапе выбора |
+| **Leaflet, react-leaflet, rlayers, MapLibre GL, Mapbox GL, Google Maps** | Выбран OpenLayers напрямую, без React-обёрток (ADR-007) |
+| **Prisma, TypeORM, Sequelize, Drizzle, Kysely, MikroORM** | Схема и запросы — чистый SQL через `pg` (ADR-003); на гонку за самокат нужен предикативный `UPDATE ... WHERE status='free'` |
+| **Redis, Memcached, RabbitMQ, Kafka, BullMQ, любые очереди** | Локальный проект, один процесс бэкенда; тики и брони живут в процессе и восстанавливаются из БД (рулсет C1) |
+| **TanStack Query, Redux, MobX, Jotai, Recoil, SWR** | Состояние — `zustand` + `ApiClient` (ADR-006); ws-поток уже даёт актуальность данных |
+| **Socket.IO, SockJS, SSE-библиотеки, GraphQL (Apollo/urql)** | Протокол — нативный WebSocket + REST (ADR-004); клиент и сервер на одном контракте из `shared` |
+| **MSW, json-server, Mirage JS, `@faker-js/faker`, chance** | Мок-данные — `mock/*.json`, сгенерированные локальной моделью и валидируемые zod (ADR-005) |
+| **Jest, Cypress, Karma, supertest, Puppeteer, `@vitest/browser`** | Тесты — `vitest` + `app.inject()` + Playwright с системным Edge (ADR-010); Puppeteer тянет собственный Chromium (~700 МБ) |
+| **PostGIS, turf.js, geolib, proj4, geojson-utils** | Геометрия зоны — собственная математика в `shared/src/zone.ts` (ray casting + гаверсинус) |
+| **moment, date-fns, dayjs, luxon** | Время — собственные функции `shared/src/time.ts` с инъекцией `Clock` (ADR-013) |
+| **axios, superagent, got** | Везде нативный `fetch` (фронт и бэк) |
+| **lodash / lodash-es, ramda** | Стандартных средств языка достаточно |
+| **i18next, react-intl, любые i18n-слои** | Язык интерфейса один — русский (ADR-014) |
+| **class-validator, class-transformer, ajv напрямую** | Валидация — zod-схемы из `shared`, одни для фронта и бэка |
+| **Styled-components, Emotion, CSS-модули, SCSS, Bootstrap, MUI, Ant Design, Chakra** | Стили — Tailwind 4 + shadcn/ui; смешение подходов запрещено |
+| **dotenv** | Node 22 умеет `--env-file` / `process.loadEnvFile()` |
+| **Storybook, Chromatic** | Не нужен для объёма проекта; визуальная приёмка — замером в браузере |
+| **Kubernetes, Traefik, Terraform, Ansible, любой CI (GitHub Actions и др.)** | Локальный запуск, `docker compose up`; CI не требуется ТЗ |
+| **React Native, Electron, Tauri, PWA-слои** | Один веб-клиент, мобильные приложения не в требованиях |
+| **Микросервисы, разделение бэкенда на несколько сервисов** | Один backend-контейнер (ADR-011) |
+| **`.gitkeep`, файлы-заглушки, «заготовки на будущее»** | Стиль пользователя: папка создаётся под первый реальный файл (рулсет C10) |
+| **`Date.now()` в расчётах таймингов и денег, `float` для денег** | Рулсет C4, C11: время — через `Clock`, деньги — целые минорные единицы |
+
+### E.3 Порядок добавления зависимости
+
+1. Проверить, что задача не решается средствами уже разрешённого стека.
+2. Записать ADR в `docs/DECISIONS.md`: контекст, решение, отклонённые альтернативы, последствия.
+3. Добавить строку в таблицу §E.1 (и убрать из §E.2, если она там была).
+4. Только после этого — `npm install`, и в том же коммите, что и код, который её использует.
+
+## F. Типизация и валидация (жёсткое требование заказчика)
+
+Цель: ошибки ловятся компилятором и zod-ом, а не в браузере; данные на границах не «доверенные»,
+а проверенные. Любое нарушение §F — баг уровня нарушения рулсета, а не стилистическая придирка.
+
+### F.1 Приведения типов запрещены
+
+| Запрещено | Комментарий |
+|---|---|
+| `value as any`, `value as unknown as T`, `value as SomeType` | Любые утверждения типов. «Иначе не компилируется» — признак неверной модели данных, а не повод кастовать |
+| `<T>value` (angle-bracket assertion) | То же самое, устаревший синтаксис |
+| `value!` (non-null assertion) | Заменяется проверкой условия или zod-схемой с обязательным полем |
+| `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck` | Скрывают ошибку вместо её исправления; в коде не появляются |
+| `JSON.parse(...) as T` | Разбор без валидации — запрещён (§F.3) |
+| `Object.keys(x) as (keyof T)[]` | Классический костыль; решается типизированным хелпером или `Object.entries` с сужением |
+
+**Единственное исключение** — `as const` на литеральных значениях (сужает строку до литерального типа)
+и `satisfies` вместо утверждения.
+
+### F.2 Чем заменять приведение
+
+- **Сужение типа**: type guard `function isScooter(x: unknown): x is Scooter`, дискриминированные
+  объединения (`{ type: 'park.delta'; changes: [...] } | { type: 'snapshot'; ... }` — уже так в `ws-protocol.ts`),
+  операторы `in`, `typeof`, `instanceof`, `Array.isArray`.
+- **`satisfies`** для проверки соответствия объекта типу без потери литеральных типов.
+- **Парсинг на границе** (zod): единственный законный способ превратить `unknown` в доменный тип.
+- **`unknown` вместо `any`**: любое значение неизвестного происхождения входит в систему как `unknown`
+  и обязано быть разобрано.
+
+### F.3 Границы данных: всё входящее проходит zod
+
+Обязательная валидация zod-схемами на каждой границе:
+
+| Граница | Что валидируем |
+|---|---|
+| HTTP-ручки Fastify | `body`, `query`, `params` — zod-схемами из `shared/src/schemas.ts` (общие с фронтом); ответ — по схеме ответа |
+| WebSocket | каждое клиентское сообщение перед обработкой, каждое серверное — перед отправкой (схемы в `shared/src/ws-protocol.ts`) |
+| Строки из БД | результат запроса → `zod.parse` в row-тип перед использованием (никаких «мы знаем, что там строка») |
+| `mock/*.json` | файлы валидируются схемами при загрузке: и фронтом, и сидом бэкенда |
+| Переменные окружения | один `loadConfig()` с zod-схемой на старте; без схемы ни одна переменная не читается |
+| `JSON.parse`, `response.json()` | сразу `.parse()`/`.safeParse()`, результат без разбора за границу не уходит |
+| `localStorage`, `sessionStorage` | значение → zod-схема с фолбэком по умолчанию |
+
+Правило формулируется так: **внутри системы ходят только провалидированные типы; всё, что пришло
+извне (сеть, диск, БД, env, хранилище браузера) — сначала `unknown`, потом zod, потом доменный тип.**
+`safeParse` там, где ошибка ожидаема (пользовательский ввод); `parse` там, где ошибка означает баг (сид, конфиг).
+
+### F.4 Настройки компилятора и линтера
+
+- `tsconfig`: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`,
+  `useUnknownInCatchVariables` (входит в strict), `verbatimModuleSyntax`, `noUnusedLocals/Parameters`.
+  Понижение любой из опций — только через ADR.
+- ESLint (type-checked, `recommendedTypeChecked`): `@typescript-eslint/no-explicit-any` = error,
+  `consistent-type-assertions: { assertionStyle: 'never', objectLiteralTypeAssertions: 'never' }` = error,
+  `no-non-null-assertion` = error, `no-unsafe-assignment`, `no-unsafe-member-access`,
+  `no-unsafe-call`, `no-unsafe-argument`, `no-unsafe-return`, `ban-ts-comment` = error.
+- Цена: ошибок в коде становится видно больше и раньше — это и есть цель.
+
+### F.5 Исключения и как они оформляются
+
+Каст или `@ts-*` допустим только как исключение при явном внешнем ограничении (например, типы
+сторонней библиотеки) и оформляется так:
+
+```ts
+// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- внешние типы Fastify не сужаются иначе
+```
+
+Правила: одна строка — одно исключение, обязательный комментарий с причиной, файл с более чем одним
+таким исключением уходит на переписывание. Исключения перечисляются в `docs/STATUS.md` (раздел «Известные
+ограничения»), чтобы их было видно при сдаче.
+
+### F.6 Критерии приёмки (проверяется на каждой стадии, сырым выводом)
+
+```bash
+grep -rnE "\bas (any|unknown)\b|as unknown as|@ts-ignore|@ts-expect-error|@ts-nocheck" src tests   # пусто
+grep -rnE "\w+!\.|\w+!\)" src tests | grep -v "!=" | grep -v "!=="                                    # пусто (non-null assertion)
+npx tsc --noEmit          # exit 0
+npx eslint .              # 0 ошибок (type-checked правила включены)
+```
+
+Тесты подчиняются тем же правилам: фикстуры строятся типизированными фабриками
+(`shared/src/testing/factories.ts`) или прогоняются через zod-схемы, а не «дописываются» кастами.
+Если для теста нужен объект невалидной формы — он собирается как `unknown` и подаётся в `safeParse`,
+это и есть проверяемое поведение.
+

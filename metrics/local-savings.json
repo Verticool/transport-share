@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-13T14:03:22.466Z",
+  "project": "transport-sharing",
+  "localStack": {
+    "model": "KAT-Coder-V2.5-Dev-APEX-Compact.gguf",
+    "modelPath": "E:\\models\\KAT-Coder-V2.5-Dev-APEX-Compact.gguf",
+    "server": "llama-server (llama.cpp b10920, CUDA 13.3)",
+    "endpoint": "http://127.0.0.1:8080/v1",
+    "alias": "kat-coder",
+    "gpu": "NVIDIA GeForce RTX 3090 24 GB",
+    "contextTokens": 262144,
+    "costPerHourUsd": 0,
+    "comment": "маржинальная стоимость локального инференса принята за 0 (электричество и износ GPU не учитываем)"
+  },
+  "pricing": {
+    "asOf": "2026-10-13",
+    "currency": "USD",
+    "perTokens": 1000000,
+    "note": "DeepSeek публикует тарифы отдельно для peak и off-peak часов; окна off-peak берутся из документации провайдера и здесь не предполагаются — считаем оба тарифа для диапазона.",
+    "models": {
+      "deepseek-flash (DeepSeek-V4.1-Flash)": {
+        "inputCacheHit": {
+          "offPeak": 0.003,
+          "peak": 0.006
+        },
+        "inputCacheMiss": {
+          "offPeak": 0.15,
+          "peak": 0.3
+        },
+        "output": {
+          "offPeak": 0.6,
+          "peak": 1.2
+        }
+      },
+      "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+        "inputCacheHit": {
+          "offPeak": 0.022,
+          "peak": 0.044
+        },
+        "inputCacheMiss": {
+          "offPeak": 0.66,
+          "peak": 1.32
+        },
+        "output": {
+          "offPeak": 1.98,
+          "peak": 3.96
+        }
+      }
+    }
+  },
+  "totals": {
+    "batches": 2,
+    "workers": 5,
+    "apiCallCount": 41,
+    "tokens": {
+      "cacheMiss": 126971,
+      "cacheHit": 1043259,
+      "output": 91656,
+      "total": 1261886
+    },
+    "wallClockSeconds": 968.7,
+    "sumTaskSeconds": 1428.78,
+    "timeSavedByParallelismSeconds": 460.08,
+    "cacheHitShare": 0.8915,
+    "costIfApi": {
+      "deepseek-flash (DeepSeek-V4.1-Flash)": {
+        "peakUsd": 0.154338,
+        "offPeakUsd": 0.077169
+      },
+      "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+        "peakUsd": 0.576463,
+        "offPeakUsd": 0.288231
+      }
+    },
+    "savedUsd": {
+      "deepseek-flash (DeepSeek-V4.1-Flash)": {
+        "peakUsd": 0.154338,
+        "offPeakUsd": 0.077169
+      },
+      "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+        "peakUsd": 0.576463,
+        "offPeakUsd": 0.288231
+      }
+    },
+    "localCostUsd": 0,
+    "parallelismFactor": 1.475
+  },
+  "batches": [
+    {
+      "delegationId": "deleg_cf2b95b8",
+      "state": "completed",
+      "dispatchedAt": "2026-10-13T13:45:20.955Z",
+      "completedAt": "2026-10-13T13:54:59.506Z",
+      "wallClockSeconds": 578.55,
+      "sumTaskSeconds": 781.55,
+      "parallelismFactor": 1.351,
+      "timeSavedByParallelismSeconds": 203,
+      "apiCallCount": 17,
+      "workerCount": 2,
+      "tokens": {
+        "cacheMiss": 67889,
+        "cacheHit": 398977,
+        "output": 51837,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "total": 518703
+      },
+      "workerSessions": [
+        {
+          "sessionId": "20261013_194520_a637fa",
+          "apiCalls": 13,
+          "cacheMissTokens": 44724,
+          "cacheHitTokens": 347605,
+          "outputTokens": 12372,
+          "seconds": 223.09
+        },
+        {
+          "sessionId": "20261013_194520_2c0e4a",
+          "apiCalls": 4,
+          "cacheMissTokens": 23165,
+          "cacheHitTokens": 51372,
+          "outputTokens": 39465,
+          "seconds": 558.47
+        }
+      ],
+      "costIfApi": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.084965,
+          "offPeakUsd": 0.042482
+        },
+        "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+          "peakUsd": 0.312443,
+          "offPeakUsd": 0.156221
+        }
+      },
+      "localCostUsd": 0,
+      "savedUsd": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.084965,
+          "offPeakUsd": 0.042482
+        }
+      },
+      "tasks": [
+        {
+          "index": 0,
+          "goal": "Выполнить задание из файла E:\\Work\\transport-sharing\\prompts\\S1-time.md: создать shared/src/time.ts и shared/tests/time.test.ts строго по контракту и требованиям, которые описаны в этом файле. Сначала прочитай файл задания целиком, затем выполни его дословно: сигнатуры из раздела «Обязательный контракт» менять нельзя, обязательные тесты из раздела «Обязательные тесты» должны быть реализованы. В конце обязательно выполнить команды из раздела «Критерии приёмки» (tsc --noEmit и vitest run) и привести их сырой вывод в отчёте.",
+          "status": "unknown"
+        },
+        {
+          "index": 1,
+          "goal": "Выполнить задание из файла E:\\Work\\transport-sharing\\prompts\\S1-zone.md: создать shared/src/zone.ts и shared/tests/zone.test.ts строго по контракту и требованиям из этого файла. Сначала прочитай файл задания целиком, затем выполни его дословно: сигнатуры из раздела «Обязательный контракт» менять нельзя, требования к точности и обязательные тесты должны быть выполнены. В конце обязательно выполнить команды из раздела «Критерии приёмки» (tsc --noEmit и vitest run) и привести их сырой вывод в отчёте.",
+          "status": "unknown"
+        }
+      ]
+    },
+    {
+      "delegationId": "deleg_3cbfbcb3",
+      "state": "completed",
+      "dispatchedAt": "2026-10-13T13:56:25.540Z",
+      "completedAt": "2026-10-13T14:02:55.693Z",
+      "wallClockSeconds": 390.15,
+      "sumTaskSeconds": 647.23,
+      "parallelismFactor": 1.659,
+      "timeSavedByParallelismSeconds": 257.08,
+      "apiCallCount": 24,
+      "workerCount": 3,
+      "tokens": {
+        "cacheMiss": 59082,
+        "cacheHit": 644282,
+        "output": 39819,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "total": 743183
+      },
+      "workerSessions": [
+        {
+          "sessionId": "20261013_195625_240a5f",
+          "apiCalls": 11,
+          "cacheMissTokens": 35218,
+          "cacheHitTokens": 333269,
+          "outputTokens": 18347,
+          "seconds": 261.57
+        },
+        {
+          "sessionId": "20261013_195625_08d178",
+          "apiCalls": 11,
+          "cacheMissTokens": 23202,
+          "cacheHitTokens": 310359,
+          "outputTokens": 21128,
+          "seconds": 383.43
+        },
+        {
+          "sessionId": "20261013_195625_08d178",
+          "apiCalls": 2,
+          "cacheMissTokens": 662,
+          "cacheHitTokens": 654,
+          "outputTokens": 344,
+          "seconds": 2.23
+        }
+      ],
+      "costIfApi": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.069373,
+          "offPeakUsd": 0.034687
+        },
+        "deepseek-v4-pro (DeepSeek-V4-Pro-0813)": {
+          "peakUsd": 0.26402,
+          "offPeakUsd": 0.13201
+        }
+      },
+      "localCostUsd": 0,
+      "savedUsd": {
+        "deepseek-flash (DeepSeek-V4.1-Flash)": {
+          "peakUsd": 0.069373,
+          "offPeakUsd": 0.034687
+        }
+      },
+      "tasks": [
+        {
+          "index": 0,
+          "goal": "Выполнить задание из файла E:\\Work\\transport-sharing\\prompts\\S1-zone-fix.md: довести shared/src/zone.ts и shared/tests/zone.test.ts до состояния, когда `npx tsc --noEmit -p tsconfig.json` даёт exit 0, а все тесты zone зелёные. В задании перечислены 5 падений с разбором (3 — ошибки в тестах, 2 — баг в clampToZone и проверка distanceToZoneBoundaryM). Публичные сигнатуры функций менять нельзя. Обязательно привести сырой вывод tsc, vitest и grep на касты.",
+          "status": "unknown"
+        },
+        {
+          "index": 1,
+          "goal": "Выполнить задание из файла E:\\Work\\transport-sharing\\prompts\\S1-money.md: создать shared/src/money.ts и shared/tests/money.test.ts строго по контракту (billableMinutes, billRide, calcRidePrice, currentAmount, formatAmount, formatMinor) и правилам расчёта. Обязательны все тесты из таблицы сценариев (3100, 3100, 3100, 3700, 11500, 12500, 2700) и проверка целочисленности всех полей. В конце — сырой вывод tsc, vitest по своему файлу и grep на касты.",
+          "status": "unknown"
+        }
+      ]
+    }
+  ],
+  "methodology": {
+    "tokens": "Из state.db → session_model_usage по сессиям воркеров (billing_provider=custom).",
+    "cacheHit": "cache_read_tokens считаются как попадание в кэш входа (тариф cache hit), input_tokens — как промах.",
+    "parallelism": "wallClockSeconds × sumTaskSeconds: батч против суммы времени отдельных задач; timeSavedByParallelismSeconds = sumTaskSeconds − wallClockSeconds.",
+    "savings": "Экономия = стоимость тех же токенов по прайсу DeepSeek − фактические локальные расходы (0).",
+    "caveats": [
+      "Локальные часы и токены взяты из учёта Hermes; при недоступности usage у провайдера значения могут быть неполными.",
+      "Окна peak/off-peak у DeepSeek различаются по времени суток — здесь показаны оба тарифа, а не выбран один.",
+      "Электричество и износ GPU не учтены (0): это оценка экономии на API, а не полная стоимость владения."
+    ]
+  }
+}

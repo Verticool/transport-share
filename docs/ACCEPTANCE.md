@@ -11,10 +11,10 @@
 |---|---|---|---|
 | A1 | Отдельный backend и frontend, общение по сети | `docker compose ps` (3 сервиса), лог nginx-проксирования `/api` | [ ] |
 | A2 | Backend на допустимом языке | `docs/ARCHITECTURE.md §2` + `backend/package.json` | [ ] |
-| A3 | Frontend React/Vue | `frontend/package.json` (react 19) | [ ] |
+| A3 | Frontend: React (не Vue) | `frontend/package.json` (react 19) + отсутствие `vue` в зависимостях | [ ] |
 | A4 | Реляционная СУБД, PostgreSQL | `docker compose exec db psql -c '\dt'` — список таблиц | [ ] |
 | A5 | Учётные записи и вход | e2e: регистрация → логин → бронь; `curl` без токена → 401 | [ ] |
-| A6 | Промпты / лог решений | `docs/DECISIONS.md` (13 ADR) + `prompts/` | [ ] |
+| A6 | Промпты / лог решений | `docs/DECISIONS.md` (16 ADR) + `prompts/` | [ ] |
 | A7 | Использование AI-агентов раскрыто | `docs/AI_USAGE.md` | [ ] |
 | A8 | Предварительные требования | `docs/RUNBOOK.md §1` | [ ] |
 | A9 | Локальный запуск | чистая копия репо → `docker compose up --build` → фронт на :8088 | [ ] |
@@ -37,7 +37,20 @@
 | B8 | Одно письмо со счётом на поездку | повторный `finish` → тот же `invoice_id`; `count(emails)=1` | vitest | [ ] |
 | B9 | Низкий заряд не показывается свободным | самокат 12 % → `unavailable`, `POST /bookings` → 409 | vitest + замер DOM | [ ] |
 
-## C. Как выглядит приёмка (процедура)
+## C. Типизация и валидация (RULES §F)
+
+| # | Требование | Проверка | Evidence |
+|---|---|---|---|
+| F1 | Приведения типов запрещены | `grep -rnE "\bas (any\|unknown)\b\|as unknown as\|@ts-ignore\|@ts-expect-error\|@ts-nocheck" shared/src shared/tests frontend/src backend/src` → пусто | [ ] |
+| F2 | Non-null assertion отсутствует | `grep -rnE "\w+!\.\|\w+!\)" …` → пусто | [ ] |
+| F3 | `any` не используется | `grep -rn ": any\|<any>\|as any" …` → пусто | [ ] |
+| F4 | Строгий tsconfig | `npx tsc --noEmit` в каждом воркспейсе → exit 0 | [ ] |
+| F5 | ESLint type-checked, 0 ошибок | `npx eslint .` → нет вывода | [ ] |
+| F6 | Zod на всех границах | `shared/src/schemas.ts` + вызовы `.parse`/`.safeParse` в ручках, ws-хабе, сиде, `loadConfig`, загрузке `mock/*.json` | [ ] |
+| F7 | Тесты без кастов | `grep` по F1/F2 в тестах пуст; фикстуры из `shared/src/testing/factories.ts` | [ ] |
+| F8 | Исключения задокументированы | каждое `eslint-disable` — с комментарием-причиной; список в `docs/STATUS.md` | [ ] |
+
+## D. Как выглядит приёмка (процедура)
 
 1. Прогон `npm run check` (typecheck/lint/unit/integration) — вывод в `docs/evidence/S<стадия>/check.txt`.
 2. Прогон `npm run test:e2e` — вывод и скриншоты в тот же каталог.

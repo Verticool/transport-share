@@ -1,0 +1,85 @@
+СЫРЫЕ ВЫВОДЫ · приёмка S1 · модули time / zone / money (второй заход, батч deleg_3cbfbcb3)
+Оркестратор: Hermes Agent · воркеры: kat-coder (локально, llama-server 127.0.0.1:8080)
+Дата: 2026-10-13 20:02–20:07 · задания: prompts/S1-zone-fix.md, prompts/S1-money.md
+
+------------------------------------------------------------------------------
+1) tsc --noEmit по всему пакету shared (строгий tsconfig.base.json)
+
+$ cd /e/Work/transport-sharing/shared && npx tsc --noEmit -p tsconfig.json
+tsc exit=0
+(в первом заходе здесь было 4 ошибки TS1345/TS2339 в tests/zone.test.ts — воркер их снял)
+
+------------------------------------------------------------------------------
+2) vitest по всем тестам пакета
+
+$ npx vitest run
+
+ RUN  v5.0.4 E:/Work/transport-sharing/shared
+
+ ✓ tests/time.test.ts (27 tests) 7ms
+ ✓ tests/zone.test.ts (28 tests) 14ms
+ ✓ tests/money.test.ts (30 tests) 22ms
+
+ Test Files  3 passed (3)
+      Tests  85 passed (85)
+   Duration  156ms
+
+------------------------------------------------------------------------------
+3) grep по запрету приведений типов и any (RULES.md §F.1)
+
+$ grep -rnE '\bas (any|unknown)\b|as unknown as|@ts-ignore|@ts-expect-error|: any|<any>' shared/src shared/tests
+(пусто)
+
+------------------------------------------------------------------------------
+4) Независимая сверка тарифов (свой скрипт, эталон — docs/DOMAIN.md §5)
+
+$ node scripts/check-pricing.mjs
+тариф: unlock=2500, ride=600/мин, pause=200/мин (тыйын)
+сценарий                         ожидалось  получено   мин(езда/пауза) итог
+старт и сразу финиш (0 с)        3100       3100       1/0            OK
+59 с                             3100       3100       1/0            OK
+60 с                             3100       3100       1/0            OK
+61 с                             3700       3700       2/0            OK
+15 мин ровно                     11500      11500      15/0           OK
+10 мин + пауза 4:20 + 5 мин      12500      12500      15/5           OK
+пауза 30 с                       2700       2700       0/1            OK
+
+целочисленность всех сумм: OK
+СВЕРКА ПРОЙДЕНА: все сценарии совпали с эталоном DOMAIN.md §5
+exit=0
+
+Дополнительный граничный случай (не из таблицы), проверен вручную:
+поездка 10 мин с паузой 30 с на 2:00–2:30 →
+{"unlockFee":2500,"rideMinutes":10,"rideAmount":6000,"pauseMinutes":1,"pauseAmount":200,"total":8700}
+Расчёт корректен: разрыв 120 с + 450 с даёт 2 + 8 = 10 минут езды, пауза 30 с → 1 минута.
+
+------------------------------------------------------------------------------
+5) ESLint 10 (type-checked, правила RULES §F.4) — ПЕРВЫЙ ПРОГОН НАШЁЛ НАРУШЕНИЯ
+
+$ npx eslint shared
+✖ 65 problems (65 errors, 0 warnings), 9 fixable
+
+Распределение по файлам/правилам:
+  shared/src/zone.ts         26 × @typescript-eslint/no-non-null-assertion, 3 × prefer-const
+  shared/tests/time.test.ts  17 × @typescript-eslint/no-non-null-assertion
+  shared/tests/zone.test.ts  12 × @typescript-eslint/no-non-null-assertion
+  shared/src/money.ts         4 × @typescript-eslint/array-type
+  shared/src/time.ts          1 × @typescript-eslint/array-type
+  shared/src/domain.ts        1 × @typescript-eslint/array-type
+  shared/vitest.config.ts     parsing error (файл не был включён в tsconfig проекта)
+
+$ npx eslint shared --fix     # снял стилевые (array-type, prefer-const): осталось 55 ошибок
+$ npx vitest run              # 85 passed (правка стиля ничего не сломала)
+$ npx tsc --noEmit -p tsconfig.json   # exit 0
+
+Исправлено оркестратором: vitest.config.ts добавлен в include shared/tsconfig.json.
+Остальные 55 non-null assertions отданы воркеру заданием prompts/S1-lint-fix.md —
+рулсет §F.1 запрещает `!`, это не стилистическая придирка, а скрытый возможный undefined.
+
+------------------------------------------------------------------------------
+6) Итог приёмки
+
+ПРИНЯТО: shared/src/time.ts, shared/src/zone.ts, shared/src/money.ts с тестами (85 тестов).
+НЕ ПРИНЯТО к сдаче до устранения: 55 нарушений `no-non-null-assertion` (задание выдано).
+Замечания к процессу: первый заход по zone был сдан с 5 падениями и 4 ошибками типов (см.
+zone-fail-and-refix.txt); зависание воркера на первом заходе и его причины — ADR-019.

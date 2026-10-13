@@ -1,0 +1,78 @@
+СЫРЫЕ ВЫВОДЫ · приёмка S1 · модуль shared/src/zone.ts — НЕ ПРИНЯТ (первая попытка)
+Оркестратор: Hermes Agent · воркер: kat-coder · задание: prompts/S1-zone.md
+Дата: 2026-10-13 19:53–19:56 · статус воркера: interrupted (остановлен оркестратором после 578 с)
+
+------------------------------------------------------------------------------
+1) Признак зависания (замер llama-server /slots, два замера с интервалом 45 с)
+
+$ curl -s http://127.0.0.1:8080/slots | grep -o '"id_task":[0-9]*|"n_prompt_tokens_processed":[0-9]*|"is_processing":[a-z]*'
+t0:    "is_processing":true "id_task":709 "n_prompt_tokens_processed":483   (n_prompt_tokens: 58334)
+t+45s: "is_processing":true "id_task":709 "n_prompt_tokens_processed":483   <- прогресса нет
+
+Транскрипт воркера также не рос:
+$ stat -c '%n size=%s mtime=%y' task-1.log
+task-1.log size=8533 mtime=2026-10-13 19:45:53   (два замера с интервалом 20 с — без изменений)
+
+Вывод: воркер набрал промпт ~58k токенов (читал лишние файлы), модель держала слот 10 минут без
+прогресса препроцессинга. Действие: delegate_task(action='stop').
+
+------------------------------------------------------------------------------
+2) Файлы всё-таки были созданы (mtime 19:54, за минуту до остановки)
+
+$ ls -la shared/src shared/tests
+-rw-r--r-- 5384 time.ts
+-rw-r--r-- 8474 zone.ts
+-rw-r--r-- 6599 time.test.ts
+-rw-r--r-- 11631 zone.test.ts
+
+------------------------------------------------------------------------------
+3) Независимая проверка tsc (ПРОВАЛ)
+
+$ cd /e/Work/transport-sharing/shared && npx tsc --noEmit -p tsconfig.json
+tests/zone.test.ts(236,7): error TS1345: An expression of type 'void' cannot be tested for truthiness.
+tests/zone.test.ts(243,39): error TS2339: Property 'toBeLessThan' does not exist on type 'void'.
+tests/zone.test.ts(250,40): error TS2339: Property 'toBeLessThan' does not exist on type 'void'.
+tests/zone.test.ts(257,40): error TS2339: Property 'toBeLessThan' does not exist on type 'void'.
+tsc exit=1
+
+------------------------------------------------------------------------------
+4) Независимая проверка vitest (ПРОВАЛ: 5 из 28 красных)
+
+$ npx vitest run tests/zone.test.ts
+❯ tests/zone.test.ts (28 tests | 5 failed) 20ms
+
+FAIL  haversineM > 1 degree of latitude ≈ 111100 m
+      AssertionError: expected 1111.950802335108 to be greater than 110985
+      (тест сравнивает 0.01° широты ≈ 1111.95 м с порогом для 1° ≈ 110985 м — неверный эталон в тесте)
+
+FAIL  haversineM > short distance accuracy within 1%
+      AssertionError: expected 597.0780733066247 to be less than 510
+      (эталон в тесте посчитан неверно)
+
+FAIL  distanceToZoneBoundaryM > point 1 km from boundary inside → ≈ 1000 ± 50 m
+      (расхождение; требует проверки: эталон теста или реализация)
+
+FAIL  clampToZone > far outside point → inside zone
+      AssertionError на строке 179: expect(isInsideZone(result, SERVICE_ZONE)).toBe(true)
+      (похоже на баг реализации: точка снаружи не приводится строго внутрь зоны)
+
+FAIL  bearingDeg > north bearing ≈ 0 ± 0.5
+      tests/zone.test.ts:236: expect(b).toBeGreaterThan(359.5) || expect(b).toBeLessThan(0.5)
+      (значение 0 корректно; сам тест написан неверно)
+
+Итог: Test Files 1 failed | 1 passed (2), Tests 5 failed | 50 passed (55)
+
+------------------------------------------------------------------------------
+5) Проверка запрета кастов (чисто)
+
+$ grep -nE '\bas (any|unknown)\b|as unknown as|@ts-ignore|@ts-expect-error|: any' shared/src/zone.ts shared/tests/zone.test.ts
+(пусто)
+
+------------------------------------------------------------------------------
+6) Действия оркестратора
+
+- Воркер остановлен (зависание).
+- Перезапуск с точечным заданием prompts/S1-zone-fix.md: разбор каждого из 5 падений,
+  запрет `||` и цепочек в expect, запрет подгонять тесты под вывод реализации,
+  требование править clampToZone в коде, запрет scratch/`cp`, запрет читать лишние файлы.
+- Приёмка повторной сдачи — отдельный файл в этом каталоге.

@@ -173,7 +173,7 @@ export interface RideEvent {
 export interface ServiceZone {
   name: string;
   /** Пары [lat, lng]. Первая точка не дублируется в конце. */
-  polygon: Array<[number, number]>;
+  polygon: [number, number][];
 }
 
 export interface LatLng {

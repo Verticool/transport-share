@@ -1,0 +1,12 @@
+# Документы и данные не форматируем автоматически: это рукописный текст,
+# у которого своя разметка (таблицы ADR, промпты, evidence-выгрузки).
+docs/
+prompts/
+metrics/
+*.md
+package-lock.json
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/

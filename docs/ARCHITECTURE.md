@@ -81,6 +81,7 @@ transport-sharing/
 │   src/features/account/      текущая поездка, история, счета, письма
 │   src/features/auth/         вход/регистрация
 │   src/lib/api/               ApiClient: интерфейс + mock-реализация (json) + http/ws-реализация
+│   src/lib/map/               обёртки OpenLayers: создание карты, слои, стили маркеров, геометрия зоны
 │   src/lib/simulator/         фронтовый симулятор парка (стадия S2–S7, потом выключается)
 │   src/stores/                zustand-стор
 │   src/hooks/                 useServerClock, useParkStream, useAuth

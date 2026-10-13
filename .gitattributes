@@ -1,0 +1,30 @@
+# Единый перевод строки в репозитории: LF у всех текстовых файлов.
+# Windows-инструменты получают CRLF на чекауте — иначе git ругается на каждый файл
+# и docker-сборка видит разные байты у разработчика и в контейнере.
+* text=auto eol=lf
+
+# Явно текстовые (в т.ч. без расширения)
+*.md text eol=lf
+*.json text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.sql text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.cmd text eol=crlf
+*.sh text eol=lf
+
+# Бинарное — не трогать
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.gguf binary
+*.woff2 binary
+
+# Сгенерированное и артефакты — не считать в статистике языка
+package-lock.json -diff linguist-generated
+docs/evidence/** linguist-documentation
