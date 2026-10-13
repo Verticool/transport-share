@@ -2,7 +2,7 @@ import { MockApiClient } from './mock-client';
 import type { ApiClient } from './types';
 
 export { ApiClientError } from './types';
-export type { ApiClient, ParkSnapshot } from './types';
+export type { ApiClient, BookingSnapshot, ParkSnapshot, RideSnapshot } from './types';
 
 /**
  * Клиент данных интерфейса.

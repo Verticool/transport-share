@@ -13,6 +13,7 @@ describe('BookingPanel', () => {
       remainingMs: 12 * 60_000 + 30_000,
       expiresSoon: false,
       busy: false,
+      onStart: vi.fn(),
       onCancel: vi.fn(),
       ...overrides,
     };
@@ -46,6 +47,15 @@ describe('BookingPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Снять бронь' }));
 
     expect(props.onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('начинает поездку из брони', async () => {
+    const user = userEvent.setup();
+    const props = renderPanel();
+
+    await user.click(screen.getByRole('button', { name: 'Начать поездку' }));
+
+    expect(props.onStart).toHaveBeenCalledTimes(1);
   });
 });
 

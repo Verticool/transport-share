@@ -1,18 +1,22 @@
+import { isInsideZone } from '@sharing/shared';
 import { useEffect, useRef, useState } from 'react';
 
 import { BookingPanel } from '../booking/booking-panel';
 import { useBooking } from '../booking/use-booking';
+import { RidePanel } from '../ride/ride-panel';
+import { useRide } from '../ride/use-ride';
+import { ZONE } from '../../config/map';
 import { MapCanvas } from './map-canvas';
 import { ParkPanel } from './park-panel';
 import { ScooterCard } from './scooter-card';
 import { usePark } from './use-park';
 
 /**
- * Экран карты: слева карта парка, справа панель с активной бронью или списком самокатов.
+ * Экран карты: слева карта парка, справа панель — поездка, бронь или список самокатов.
  *
- * Данные приходят сюда одной загрузкой и раздаются вниз: карта не ходит в сеть сама,
- * поэтому список, карточка и маркеры всегда показывают один и тот же срез парка.
- * Состояние брони держит источник данных — интерфейс только показывает его.
+ * Порядок панелей отражает приоритет для пользователя: идёт поездка — показываем поездку,
+ * есть бронь — показываем бронь, иначе выбранный самокат и список парка. Данные приходят
+ * одним срезом, поэтому карта, список и панель всегда согласованы.
  */
 export function MapPage() {
   const { scooters, loading, error, reload } = usePark();
@@ -24,44 +28,102 @@ export function MapPage() {
     error: bookingError,
     book,
     cancel,
+    refresh: refreshBooking,
   } = useBooking();
+  const ride = useRide();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Парк обновляем при смене брони: забронированный самокат должен уйти из свободных,
-  // а снятый по сроку — вернуться. Первый рендер пропускаем, иначе будет лишний запрос.
-  const previousBookingId = useRef<string | null>(null);
+  /**
+   * Начать поездку из брони.
+   *
+   * После старта бронь на стороне данных израсходована, поэтому её состояние перезапрашиваем:
+   * иначе панель продолжит показывать бронь, которой уже нет (проверено вживую).
+   */
+  const handleStartRide = async (bookingId: string): Promise<void> => {
+    await ride.start(bookingId);
+    refreshBooking();
+  };
+
+  /** Завершение поездки: обновляем и бронь (её уже нет), и парк — самокат вернулся на линию. */
+  const handleFinishRide = async (): Promise<void> => {
+    await ride.finish();
+    refreshBooking();
+    reload();
+  };
+
+  // Парк перечитываем, когда меняется состояние на стороне данных: бронь, её снятие, поездка.
+  // Первый рендер пропускаем, иначе получим лишний запрос на старте.
+  const previousState = useRef('init');
   useEffect(() => {
-    const currentId = booking?.id ?? null;
-    if (previousBookingId.current !== currentId) {
-      previousBookingId.current = currentId;
+    const current = `${booking?.id ?? 'no-booking'}|${ride.ride?.status ?? 'no-ride'}|${ride.ride?.id ?? ''}`;
+    if (previousState.current !== current) {
+      previousState.current = current;
       reload();
     }
-  }, [booking, reload]);
+  }, [booking, ride.ride, reload]);
 
   const selected = scooters.find((scooter) => scooter.id === selectedId) ?? null;
   const bookedScooter =
     booking === null ? null : (scooters.find((scooter) => scooter.id === booking.scooterId) ?? null);
+  const rideScooter =
+    ride.ride === null
+      ? null
+      : (scooters.find((scooter) => scooter.id === ride.ride?.scooterId) ?? null);
+
+  const activeRide = ride.ride !== null && ride.ride.status !== 'finished';
+  // Завершить поездку можно только внутри зоны: самокат сам не двигается (симулятор — S9),
+  // но положение берём из данных, а не из предположений интерфейса.
+  const canFinishHere =
+    rideScooter === null || isInsideZone({ lat: rideScooter.lat, lng: rideScooter.lng }, ZONE);
 
   return (
     <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="relative min-h-[420px] overflow-hidden rounded-xl border">
-        <MapCanvas scooters={scooters} selectedId={selectedId} />
+        <MapCanvas scooters={scooters} selectedId={selectedId ?? ride.ride?.scooterId ?? null} />
       </div>
 
       <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto" aria-label="Панель парка">
-        {booking !== null && bookedScooter !== null && (
+        {activeRide && ride.ride !== null && rideScooter !== null && (
+          <RidePanel
+            scooterCode={rideScooter.code}
+            status={ride.ride.status}
+            elapsedSeconds={ride.elapsedSeconds}
+            rideMinutes={ride.rideMinutes}
+            pauseMinutes={ride.pauseMinutes}
+            amount={ride.amount}
+            currencySymbol={ride.tariff.currencySymbol}
+            canFinishHere={canFinishHere}
+            offline={ride.offline}
+            busy={ride.busy}
+            error={ride.error}
+            onPause={() => {
+              void ride.pause();
+            }}
+            onResume={() => {
+              void ride.resume();
+            }}
+            onFinish={() => {
+              void handleFinishRide();
+            }}
+          />
+        )}
+
+        {!activeRide && booking !== null && bookedScooter !== null && (
           <BookingPanel
             scooterCode={bookedScooter.code}
             remainingMs={remainingMs}
             expiresSoon={expiresSoon}
             busy={bookingBusy}
+            onStart={() => {
+              void handleStartRide(booking.id);
+            }}
             onCancel={() => {
               void cancel();
             }}
           />
         )}
 
-        {booking === null && selected !== null && (
+        {!activeRide && booking === null && selected !== null && (
           <ScooterCard
             scooter={selected}
             busy={bookingBusy}

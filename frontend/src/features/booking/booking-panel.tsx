@@ -8,9 +8,10 @@ export interface BookingPanelProps {
   scooterCode: string;
   /** Осталось до автоматического снятия, миллисекунды. */
   remainingMs: number;
-  /** Пора предупредить: до снятия не больше BOOKING_NOTIFY_MINUTES. */
+  /** Пора предупредить: до снятия не больше BOOKING_TTL_MINUTES. */
   expiresSoon: boolean;
   busy: boolean;
+  onStart: () => void;
   onCancel: () => void;
 }
 
@@ -25,6 +26,7 @@ export function BookingPanel({
   remainingMs,
   expiresSoon,
   busy,
+  onStart,
   onCancel,
 }: BookingPanelProps) {
   const totalSeconds = Math.ceil(remainingMs / 1000);
@@ -60,6 +62,9 @@ export function BookingPanel({
           </p>
         )}
 
+        <Button type="button" onClick={onStart} disabled={busy}>
+          Начать поездку
+        </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
           Снять бронь
         </Button>

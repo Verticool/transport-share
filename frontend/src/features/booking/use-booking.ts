@@ -17,6 +17,8 @@ export interface BookingState {
   error: string | null;
   book: (scooterId: string) => Promise<void>;
   cancel: () => Promise<void>;
+  /** Перезапросить бронь: нужен после того, как поездка началась и бронь израсходована. */
+  refresh: () => void;
 }
 
 export interface UseBookingOptions {
@@ -49,6 +51,8 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
   const [nowMs, setNowMs] = useState(() => now());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Счётчик запросов: позволяет перезапросить состояние снаружи (например, после старта поездки).
+  const [attempt, setAttempt] = useState(0);
 
   const applySnapshot = useCallback(
     (snapshot: { booking: Booking; serverTime: string } | null): void => {
@@ -74,7 +78,7 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, attempt]);
 
   // Тикер нужен только пока бронь жива: без неё отсчитывать нечего.
   useEffect(() => {
@@ -139,5 +143,8 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
     error,
     book,
     cancel,
+    refresh: () => {
+      setAttempt((value) => value + 1);
+    },
   };
 }
