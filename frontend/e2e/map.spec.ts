@@ -36,6 +36,43 @@ test.describe('карта парка', () => {
     await expect(card.getByText(/\d+([.,]\d+)? (м|км)/)).toBeVisible();
   });
 
+  test('все точки парка видны всегда, и об этом сказано на панели', async ({ page }) => {
+    await page.goto('/');
+
+    // Требование стенда: парк показан целиком, в том числе во время поездки — так проверяются
+    // сценарии. Пользователь должен понимать, что это отступление от рабочего приложения.
+    await expect(page.getByTestId('park-visibility-note')).toContainText('Показаны все самокаты');
+    await expect(page.getByTestId('park-visibility-note')).toContainText('только ваш самокат и зона');
+    await expect(page.getByTestId('park-list').getByRole('button')).toHaveCount(40);
+  });
+
+  test('клик по пустому месту карты снимает выделение, а перетаскивание — нет', async ({ page }) => {
+    await page.goto('/');
+
+    const code = await openFreeScooter(page);
+    const card = page.getByTestId('scooter-card');
+    await expect(card).toContainText(`Самокат ${code}`);
+
+    const viewport = page.locator('.ol-viewport');
+    const box = await viewport.boundingBox();
+    if (box === null) {
+      throw new Error('карта не заняла место на странице');
+    }
+
+    // Перетаскивание: карту двигают, отпускают в другой точке. Браузер присылает то же событие
+    // клика, но выделение снимать нельзя — пользователь смотрел город, а не сбрасывал выбор.
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.5 + 80, box.y + box.height * 0.5 + 40, { steps: 8 });
+    await page.mouse.up();
+    await expect(card).toBeVisible();
+
+    // Обычный клик по свободному от маркеров месту: выделение снимается, карточка закрывается.
+    // Берём угол карты — там нет ни зоны, ни самокатов парка.
+    await page.mouse.click(box.x + 6, box.y + 6);
+    await expect(card).toHaveCount(0);
+  });
+
   test('панель парка считает сводку по статусам', async ({ page }) => {
     await page.goto('/');
 

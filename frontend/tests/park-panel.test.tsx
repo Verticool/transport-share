@@ -74,6 +74,17 @@ describe('ParkPanel', () => {
     expect(screen.getByTestId('park-empty')).toHaveTextContent('Под выбранные состояния ничего не попало');
   });
 
+  it('объясняет, что на стенде показаны все самокаты, и чем это отличается от рабочего приложения', () => {
+    renderPanel();
+
+    // Мы намеренно показываем весь парк всегда: так проверяются сценарии. Пользователь должен
+    // видеть, что во время поездки это отступление, а не поведение рабочего приложения.
+    const note = screen.getByTestId('park-visibility-note');
+    expect(note).toHaveTextContent('Показаны все самокаты');
+    expect(note).toHaveTextContent('во время поездки');
+    expect(note).toHaveTextContent('только ваш самокат и зона обслуживания');
+  });
+
   it('кнопка «Показать все состояния» возвращает полный фильтр', async () => {
     const user = userEvent.setup();
     const props = renderPanel({ scooters: [FAR, NEAR], statusFilter: ['free'] });

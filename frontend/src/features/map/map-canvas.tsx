@@ -35,6 +35,13 @@ export interface MapCanvasProps {
    * что и строка списка. Без этого бронь была доступна только из списка.
    */
   onSelect?: (scooterId: string) => void;
+  /**
+   * Снятие выделения кликом по пустому месту карты.
+   *
+   * Если обработчик не передан, выделение не снимается: во время поездки карта не должна терять
+   * самокат, за которым следит клиент.
+   */
+  onClearSelect?: (() => void) | undefined;
   /** Часы: время последнего действия с картой нужно для задержки автоследования (RULES §F). */
   now?: () => number;
   /** Дополнительные классы контейнера. */
@@ -56,6 +63,14 @@ const FOLLOW_THROTTLE_MS = 4000;
 const SELECT_ZOOM = 16;
 
 /**
+ * Допуск между нажатием и отпусканием, при котором движение считается перетаскиванием карты.
+ *
+ * Клик после перетаскивания браузер не отличает от обычного клика и присылает то же событие.
+ * Без этого допуска панорамирование карты каждый раз сбрасывало бы выбранный самокат.
+ */
+const DRAG_TOLERANCE_PX = 4;
+
+/**
  * Карта парка как React-компонент.
  *
  * OpenLayers владеет собственным DOM внутри контейнера, поэтому карта создаётся императивно
@@ -70,6 +85,7 @@ export function MapCanvas({
   scooters,
   selectedId = null,
   onSelect,
+  onClearSelect,
   now = () => Date.now(),
   className,
 }: MapCanvasProps) {
@@ -94,12 +110,18 @@ export function MapCanvas({
   // Обработчик выбора живёт в ref: карта создаётся один раз, а подписка не должна пересоздаваться
   // из-за новой ссылки на функцию при каждом рендере (иначе обработчики накапливались бы).
   const selectRef = useRef<((scooterId: string) => void) | undefined>(onSelect);
+  // Обработчик снятия выделения — по той же причине в ref: подписка на карте одна.
+  const clearRef = useRef<(() => void) | undefined>(onClearSelect);
 
   // Подписка на клик читает обработчик из ref, поэтому его нужно обновлять после рендера,
   // а не во время: во время рендера ref-ы трогать нельзя (правило React).
   useEffect(() => {
     selectRef.current = onSelect;
   }, [onSelect]);
+
+  useEffect(() => {
+    clearRef.current = onClearSelect;
+  }, [onClearSelect]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -143,13 +165,29 @@ export function MapCanvas({
       return found;
     };
 
+    // Где нажали кнопку: движение между нажатием и отпусканием отличает клик от перетаскивания.
+    let pressedAt: { x: number; y: number } | null = null;
+
     // Слушаем вьюпорт карты, а координату точки берём у карты: так выбор самоката не зависит от
     // того, как тип события карты назван в библиотеке, и работает и мышью, и касанием.
     const handleClick = (event: MouseEvent): void => {
+      const pressed = pressedAt;
+      pressedAt = null;
+      const dragged =
+        pressed !== null &&
+        Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > DRAG_TOLERANCE_PX;
+      if (dragged) {
+        // Карту двигали: это панорамирование, а не выбор. Выделенный самокат остаётся выделенным.
+        return;
+      }
+
       const scooterId = scooterAt(map.getEventPixel(event));
       if (scooterId !== null) {
         selectRef.current?.(scooterId);
+        return;
       }
+      // Пустое место карты: снимаем выделение, если владелец карты это разрешил.
+      clearRef.current?.();
     };
 
     // Курсор показывает, что по маркеру можно щёлкнуть — иначе карта выглядит как картинка.
@@ -167,10 +205,14 @@ export function MapCanvas({
     const markInteraction = (): void => {
       lastTouchRef.current = nowRef.current();
     };
+    const handlePointerDown = (event: PointerEvent): void => {
+      pressedAt = { x: event.clientX, y: event.clientY };
+      markInteraction();
+    };
     const viewport = map.getViewport();
     viewport?.addEventListener('click', handleClick);
     viewport?.addEventListener('pointermove', handlePointerMove);
-    viewport?.addEventListener('pointerdown', markInteraction);
+    viewport?.addEventListener('pointerdown', handlePointerDown);
     viewport?.addEventListener('wheel', markInteraction);
     viewport?.addEventListener('touchstart', markInteraction);
     viewport?.addEventListener('keydown', markInteraction);
@@ -179,7 +221,7 @@ export function MapCanvas({
       observer.disconnect();
       viewport?.removeEventListener('click', handleClick);
       viewport?.removeEventListener('pointermove', handlePointerMove);
-      viewport?.removeEventListener('pointerdown', markInteraction);
+      viewport?.removeEventListener('pointerdown', handlePointerDown);
       viewport?.removeEventListener('wheel', markInteraction);
       viewport?.removeEventListener('touchstart', markInteraction);
       viewport?.removeEventListener('keydown', markInteraction);

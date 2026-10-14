@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MapCanvas } from '../src/features/map/map-canvas';
 import { useThemeStore } from '../src/stores/theme';
@@ -11,9 +11,35 @@ import { useThemeStore } from '../src/stores/theme';
  * что и в браузере (заглушка `ResizeObserver` подключена в setup.ts). Смысл проверок —
  * что компонент не оставляет за собой «мёртвых» карт и переживает смену темы.
  */
-function renderCanvas(strict = false, scooters: Parameters<typeof MapCanvas>[0]['scooters'] = []) {
-  const canvas = <MapCanvas scooters={scooters} />;
+function renderCanvas(
+  strict = false,
+  scooters: Parameters<typeof MapCanvas>[0]['scooters'] = [],
+  handlers: { onSelect?: (id: string) => void; onClearSelect?: () => void } = {},
+) {
+  // Пропсы собираются по условию: `exactOptionalPropertyTypes` не разрешает передавать undefined
+  // в необязательное свойство (RULES §F).
+  const props: {
+    scooters: typeof scooters;
+    onSelect?: (scooterId: string) => void;
+    onClearSelect?: () => void;
+  } = { scooters };
+  if (handlers.onSelect !== undefined) {
+    props.onSelect = handlers.onSelect;
+  }
+  if (handlers.onClearSelect !== undefined) {
+    props.onClearSelect = handlers.onClearSelect;
+  }
+  const canvas = <MapCanvas {...props} />;
   return render(strict ? <StrictMode>{canvas}</StrictMode> : canvas);
+}
+
+/** Клик по карте: jsdom не двигает мышь сам, поэтому событие отправляем в вьюпорт вручную. */
+function clickOnMap(x: number, y: number): void {
+  const viewport = document.querySelector('.ol-viewport');
+  if (viewport === null) {
+    throw new Error('вьюпорт карты не найден');
+  }
+  viewport.dispatchEvent(new MouseEvent('click', { clientX: x, clientY: y, bubbles: true }));
 }
 
 function viewports(): NodeListOf<Element> {
@@ -72,6 +98,42 @@ describe('MapCanvas', () => {
     expect(viewports()).toHaveLength(1);
     expect(container.querySelector('.ol-viewport')).toBe(viewportBefore);
     expect(screen.getByRole('button', { name: 'Приблизить' })).toBeInTheDocument();
+  });
+
+  it('клик по пустому месту карты снимает выделение', () => {
+    const onClearSelect = vi.fn();
+    const onSelect = vi.fn();
+    renderCanvas(false, [], { onSelect, onClearSelect });
+
+    clickOnMap(200, 150);
+
+    // Маркеров нет — под курсором пусто, значит выделять нечего и владелец карты снимает выбор.
+    expect(onClearSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('перетаскивание карты не снимает выделение: клик после драга — это панорамирование', () => {
+    const onClearSelect = vi.fn();
+    renderCanvas(false, [], { onSelect: vi.fn(), onClearSelect });
+
+    const viewport = document.querySelector('.ol-viewport');
+    if (viewport === null) {
+      throw new Error('вьюпорт карты не найден');
+    }
+    // Нажали в одной точке, отпустили и «щёлкнули» в другой — так браузер отдаёт перетаскивание.
+    viewport.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, bubbles: true }));
+    clickOnMap(180, 100);
+
+    expect(onClearSelect).not.toHaveBeenCalled();
+  });
+
+  it('если владелец карты не разрешил снятие выделения, пустой клик ничего не делает', () => {
+    const onSelect = vi.fn();
+    renderCanvas(false, [], { onSelect });
+
+    clickOnMap(200, 150);
+
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it('даёт свои кнопки зума и подпись источника вместо контролов библиотеки', () => {

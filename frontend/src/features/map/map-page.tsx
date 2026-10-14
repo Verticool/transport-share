@@ -109,6 +109,9 @@ export function MapPage() {
           scooters={visibleScooters}
           selectedId={selectedId ?? ride.ride?.scooterId ?? null}
           onSelect={setSelectedId}
+          // Клик по пустому месту карты снимает выделение, пока нет поездки: во время поездки
+          // карта держит самокат, за которым следит клиент.
+          onClearSelect={activeRide ? undefined : () => setSelectedId(null)}
         />
       </div>
 

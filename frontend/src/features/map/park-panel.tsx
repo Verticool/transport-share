@@ -85,6 +85,14 @@ export function ParkPanel({
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
+        {/* Примечание о видимости точек: в учебном стенде парк показан целиком всегда — так
+            удобнее проверять сценарии. В рабочем приложении во время поездки на карте остались бы
+            только самокат клиента и зона обслуживания. */}
+        <p className="text-xs text-muted-foreground" data-testid="park-visibility-note">
+          Показаны все самокаты — и во время поездки тоже: так удобнее тестировать. В рабочем
+          приложении во время поездки на карте видны только ваш самокат и зона обслуживания.
+        </p>
+
         <ul className="grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Фильтр по состоянию">
           {SCOOTER_STATUS_ORDER.map((status) => {
             const enabled = statusFilter.includes(status);
