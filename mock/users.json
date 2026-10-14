@@ -40,5 +40,12 @@
     "name": "Физа",
     "createdAt": "2026-11-10T08:53:20.000Z",
     "updatedAt": "2026-11-10T08:53:20.000Z"
+  },
+  {
+    "id": "14a0cfdc-4c96-41c0-b696-7ae69742c7ca",
+    "email": "demo2@sharing.kg",
+    "name": "Демо 2",
+    "createdAt": "2026-09-13T12:00:00.000Z",
+    "updatedAt": "2026-09-13T12:00:00.000Z"
   }
 ]

@@ -84,9 +84,10 @@ describe('mock/*.json — валидация', () => {
   });
 
   // 3. Ровно N записей
-  it('ровно 40 самокатов, 6 пользователей, 25 поездок, 25 счетов, 25 писем, у зоны 8 точек', () => {
+  it('ровно 40 самокатов, 7 пользователей, 25 поездок, 25 счетов, 25 писем, у зоны 8 точек', () => {
     const data = generateMock();
-    expect(data.users.length).toBe(6);
+    // Шесть «ездящих» пользователей (на них распределены поездки) и второй демо-вход demo2@sharing.kg.
+    expect(data.users.length).toBe(7);
     expect(data.scooters.length).toBe(40);
     expect(data.rides.length).toBe(25);
     expect(data.invoices.length).toBe(25);
@@ -264,11 +265,19 @@ describe('mock/*.json — валидация', () => {
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
 
-  // 15. Демо-пользователь demo@sharing.kg присутствует
-  it('демо-пользователь demo@sharing.kg присутствует', () => {
+  // 15. Демонстрационные входы: основной и второй (те же права, отдельная почта)
+  it('демонстрационные пользователи demo@sharing.kg и demo2@sharing.kg присутствуют', () => {
     const data = generateMock();
     const demo = data.users.find((u) => u.email === 'demo@sharing.kg');
-    if (!demo) throw new Error('Demo user not found');
+    const demo2 = data.users.find((u) => u.email === 'demo2@sharing.kg');
+    if (!demo || !demo2) throw new Error('Демонстрационный пользователь не найден');
     expect(demo.name).toBe('Демо');
+    expect(demo2.name).toBe('Демо 2');
+    // Демо-аккаунт для входа не участвует в истории: у него нет ни поездок, ни счетов, ни писем.
+    expect(data.rides.some((ride) => ride.userId === demo2.id)).toBe(false);
+    expect(data.invoices.some((invoice) => invoice.userId === demo2.id)).toBe(false);
+    expect(data.emails.some((email) => email.userId === demo2.id)).toBe(false);
+    // И он не сдвинул существующие данные: у основного пользователя история на месте.
+    expect(data.rides.some((ride) => ride.userId === demo.id)).toBe(true);
   });
 });

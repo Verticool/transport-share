@@ -27,6 +27,9 @@ function mulberry32(seed) {
 }
 
 const SEED = 42;
+// Диапазон идентификаторов для пользователей «только для входа»: не пересекается с рабочим
+// счётчиком, поэтому добавление такого аккаунта не сдвигает существующие данные.
+const extraUidBase = 900;
 
 // ─── Утилиты ──────────────────────────────────────────────────────────────────
 
@@ -83,7 +86,8 @@ export function generateMock() {
   };
 
   // ── users ────────────────────────────────────────────────────────────────
-  const users = [
+  // Часть пользователей «ездит» в данных: поездки, счета и письма распределяются между ними.
+  const riders = [
     {
       id: uid(uidCounter++),
       email: 'demo@sharing.kg',
@@ -127,6 +131,21 @@ export function generateMock() {
       updatedAt: toIso(thirtyDaysAgo + 5_000_000_000),
     },
   ];
+
+  // Второй демонстрационный вход: те же права, что у demo@sharing.kg.
+  // Идентификатор берётся из отдельного диапазона, а сам пользователь не участвует в розыгрыше
+  // поездок — иначе добавление записи изменило бы все уже существующие данные.
+  const extraUsers = [
+    {
+      id: uid(extraUidBase),
+      email: 'demo2@sharing.kg',
+      name: 'Демо 2',
+      createdAt: toIso(thirtyDaysAgo),
+      updatedAt: toIso(thirtyDaysAgo),
+    },
+  ];
+
+  const users = [...riders, ...extraUsers];
 
   // ── scooters ─────────────────────────────────────────────────────────────
   // Распределение: 19 free, 6 reserved, 5 in_ride, 10 unavailable.
@@ -213,7 +232,8 @@ export function generateMock() {
     );
 
     const scooterId = pick(rideableScooterIds, rng);
-    const userId = pick(users.map((u) => u.id), rng);
+    // Поездки распределяются между основной группой: демо-аккаунты для входа историю не получают.
+    const userId = pick(riders.map((u) => u.id), rng);
 
     const rideId = uid(uidCounter++);
     const bookingId = uid(uidCounter++);

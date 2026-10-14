@@ -11,7 +11,7 @@
 | A2 | Backend на допустимом языке | Node 22 LTS + TypeScript + Fastify 5, обоснование выбора — ADR-002 | `evidence/S12/rules-and-stack.txt` (A2), `ARCHITECTURE.md §2` |
 | A3 | Frontend на React (не Vue) | `frontend/package.json` → `react ^19.3.0`; поиск `vue`/`@vue` по всем манифестам пуст | `evidence/S12/rules-and-stack.txt` (A3) |
 | A4 | Реляционная СУБД, PostgreSQL | `docker compose exec db psql -U sharing -d sharing -c '\dt'` → 11 таблиц | `evidence/S12/docker-acceptance.txt` п.6, `evidence/S8/db-acceptance.txt` |
-| A5 | Учётные записи и вход | регистрация и вход на живой базе; без токена защищённые ручки отвечают 401; выход гасит сессию | `evidence/S9/rest-acceptance.txt`, `backend/tests/db/api.test.ts` |
+| A5 | Учётные записи и вход | регистрация и вход на живой базе; два демонстрационных входа (`demo@sharing.kg`, `demo2@sharing.kg`) с одинаковым паролем; без токена защищённые ручки отвечают 401; выход гасит сессию | `evidence/S9/rest-acceptance.txt`, `backend/tests/db/api.test.ts` |
 | A6 | Промпты и лог решений | ADR в `DECISIONS.md`, промпты в `prompts/`, правила работы агента в `RULES.md` | `docs/DECISIONS.md`, `prompts/` |
 | A7 | Использование AI-агентов раскрыто | `AI_USAGE.md`: что делал агент, что человек, где агент не справился | `docs/AI_USAGE.md` |
 | A8 | Предварительные требования | версии Node, Docker, браузера, объём памяти, занятые порты | `RUNBOOK.md §1` |

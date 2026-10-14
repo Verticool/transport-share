@@ -219,7 +219,8 @@ suite('сид из мок-данных', () => {
     await pool.query('TRUNCATE ride_points, ride_events, ride_pauses, invoices, emails, rides, bookings, scooters, users CASCADE');
 
     const first = await seed(pool, mockDir);
-    expect(first.users).toBe(6);
+    // Шесть «ездящих» пользователей плюс демо-аккаунт для входа (demo2@sharing.kg).
+    expect(first.users).toBe(7);
     expect(first.scooters).toBe(40);
     expect(first.rides).toBe(25);
     expect(first.invoices).toBeGreaterThan(0);
