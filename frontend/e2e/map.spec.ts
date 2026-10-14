@@ -132,7 +132,25 @@ test.describe('карта парка', () => {
     }
     expect(map.height).toBeGreaterThan(180);
     expect(map.y + map.height).toBeLessThanOrEqual(844);
-    expect(list.height).toBeGreaterThan(60);
+    // Таблица парка на телефоне — не обрезок в пару строк: список получает высоту по содержимому.
+    expect(list.height).toBeGreaterThan(600);
+
+    // Ни одна строка не выходит за карточку: подсветка выбранной строки не должна «вылезать» на фон.
+    const card = await page.getByTestId('park-list').locator('xpath=ancestor::div[contains(@class,"rounded-xl")][1]').boundingBox();
+    if (card === null) {
+      throw new Error('карточка парка не найдена');
+    }
+    const overflow = await page.getByTestId('park-list').evaluate((element) => {
+      const cardBox = element.closest('div[class*="rounded-xl"]')?.getBoundingClientRect();
+      if (!cardBox) {
+        return -1;
+      }
+      return [...element.querySelectorAll('button')].filter((row) => {
+        const box = row.getBoundingClientRect();
+        return box.right > cardBox.right + 1 || box.left < cardBox.left - 1;
+      }).length;
+    });
+    expect(overflow).toBe(0);
 
     // Шапка колонок не переносится: подписи совпадают с числами.
     await expect(page.getByTestId('park-list-header')).toContainText('До центра');

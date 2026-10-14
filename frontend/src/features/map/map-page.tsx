@@ -140,7 +140,9 @@ export function MapPage() {
   return (
     // Экран занимает всю доступную высоту: на телефоне карта получает верхнюю половину, панель —
     // остальное и прокручивается сама. Иначе карта сжималась, а панель выдавливала её за экран.
-    <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(200px,45%)_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-1 lg:gap-4 lg:p-4">
+    // На телефоне карта занимает верхнюю треть, панель — остальное: таблице парка нужно больше
+    // высоты, чем помещалось при «карта 45 % / панель 55 %».
+    <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(180px,34%)_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-1 lg:gap-4 lg:p-4">
       <div className="relative min-h-0 overflow-hidden rounded-xl border">
         <MapCanvas
           scooters={visibleScooters}
