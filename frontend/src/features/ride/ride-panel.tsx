@@ -1,6 +1,7 @@
 import {
   formatDuration,
   formatMinor,
+  LOW_BATTERY_THRESHOLD,
   STEER_STEP_M,
   type Minor,
   type RideStatus,
@@ -14,6 +15,7 @@ const STEER_BIG_STEP_M = 200;
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { formatDistance } from '../../lib/format';
 import { cn } from '../../lib/utils';
 
 export interface RidePanelProps {
@@ -31,6 +33,11 @@ export interface RidePanelProps {
   canFinishHere: boolean;
   /** Заряд самоката, на котором идёт поездка: в поездке он так же важен, как время и сумма. */
   batteryPct: number | null;
+  /**
+   * Ближайший свободный самокат: нужен, когда батарея садится — человеку важно, чем замениться.
+   * Если свободных рядом нет, передаётся null и подсказка обходится словами.
+   */
+  replacement: { code: string; distanceM: number } | null;
   /** Связь с источником данных потеряна: сумма считается, но может отставать. */
   offline: boolean;
   busy: boolean;
@@ -81,6 +88,7 @@ export function RidePanel({
   currencySymbol,
   canFinishHere,
   batteryPct,
+  replacement,
   offline,
   busy,
   error,
@@ -92,6 +100,9 @@ export function RidePanel({
   onDrain,
 }: RidePanelProps) {
   const paused = status === 'paused';
+  // Заряд ниже порога: самокат скоро отключится сам, поэтому предупреждаем заранее и предлагаем
+  // замену. Порог общий с доменом — тот же, по которому самокат становится недоступным в парке.
+  const lowBattery = batteryPct !== null && batteryPct < LOW_BATTERY_THRESHOLD;
   // Шаг руля: 20 м — обычный, 200 м — крупный, чтобы быстро выехать за границу зоны для проверки.
   const [stepM, setStepM] = useState<number>(STEER_STEP_M);
 
@@ -173,6 +184,23 @@ export function RidePanel({
             Завершить
           </Button>
         </div>
+
+        {lowBattery && (
+          <div
+            className="flex flex-col gap-1 rounded-lg border border-destructive/30 bg-destructive/10 p-3"
+            data-testid="ride-low-battery"
+            role="status"
+          >
+            <p className="text-xs font-medium text-destructive">
+              {`Батарея почти пуста: заряд ${batteryPct ?? 0} %. Самокат отключится сам, и поездка закроется по разряду.`}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {replacement === null
+                ? 'Пора искать замену: свободных самокатов рядом сейчас нет — вернитесь в зону и завершите поездку.'
+                : `Пора искать замену: ближайший свободный — ${replacement.code}, ${formatDistance(replacement.distanceM)}. Завершите поездку в зоне и возьмите его.`}
+            </p>
+          </div>
+        )}
 
         {!canFinishHere && (
           <div

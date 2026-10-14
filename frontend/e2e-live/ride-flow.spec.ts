@@ -57,6 +57,22 @@ test('поездка с карты под вторым демо-входом: б
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await expect(page.getByTestId('ride-panel')).toContainText('Едем');
 
+  // Разряжаем батарею до порога и проверяем предупреждение с подсказкой замены. Это тот случай,
+  // который в жизни требует действий: самокат вот-вот отключится сам, пора брать другой.
+  // Разряжаем до порога, но не до нуля: на нуле поездка закрывается сама, и панель исчезает.
+  for (let press = 0; press < 12; press += 1) {
+    const shown = await page.getByTestId('ride-battery').innerText();
+    const percent = Number(/(\d+)/.exec(shown)?.[1] ?? '100');
+    if (percent <= 15) {
+      break;
+    }
+    await page.getByTestId('ride-drain').click();
+  }
+  const warning = page.getByTestId('ride-low-battery');
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText('Пора искать замену');
+
+
   await page.getByTestId('ride-panel').getByRole('button', { name: 'Завершить' }).click();
   await expect(page.getByTestId('ride-panel')).toHaveCount(0);
 

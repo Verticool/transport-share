@@ -75,6 +75,19 @@ describe('ScooterCard', () => {
     return props;
   }
 
+  it('предупреждает о разряженном самокате до брони', () => {
+    renderCard({ scooter: makeScooter({ id: 's-2', code: 'SC-009', status: 'free', batteryPct: 12 }) });
+
+    // Человек вправе выбрать другой самокат, поэтому предупреждаем до брони, а не в поездке.
+    expect(screen.getByTestId('scooter-low-battery')).toHaveTextContent('Батарея почти пуста — заряд 12 %');
+  });
+
+  it('молчит про заряд, когда он в порядке', () => {
+    renderCard();
+
+    expect(screen.queryByTestId('scooter-low-battery')).toBeNull();
+  });
+
   it('предлагает забронировать свободный самокат', async () => {
     const user = userEvent.setup();
     const props = renderCard();

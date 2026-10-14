@@ -3,6 +3,8 @@ import { X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '../../components/ui/button';
+import { LOW_BATTERY_THRESHOLD } from '@sharing/shared';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { StatusBadge } from '../../components/ui/status-badge';
 import { MAP_CENTER_LATLNG } from '../../config/map';
@@ -63,6 +65,16 @@ export function ScooterCard({
       </CardHeader>
 
       <CardContent className="flex flex-col gap-3">
+        {/* Предупреждаем до брони: с таким зарядом поездка будет короткой, и человек вправе выбрать другой. */}
+        {scooter.batteryPct < LOW_BATTERY_THRESHOLD && (
+          <p
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+            data-testid="scooter-low-battery"
+            role="status"
+          >
+            {`Батарея почти пуста — заряд ${scooter.batteryPct} %: самокат отключится сам, поездка будет короткой.`}
+          </p>
+        )}
         <div className="flex items-center gap-2">
           <StatusBadge status={scooter.status} />
           <span className="tabular ml-auto text-xs text-muted-foreground">

@@ -10,6 +10,7 @@ import { ZONE } from '../../config/map';
 import { MapCanvas } from './map-canvas';
 import { ParkPanel } from './park-panel';
 import { ScooterCard } from './scooter-card';
+import { scooterDistanceM } from '../../lib/map/scooter-layer';
 import { usePark } from './use-park';
 import { SCOOTER_STATUS_ORDER } from '../../config/scooter-status';
 import { useSessionStore } from '../../stores/session';
@@ -112,6 +113,25 @@ export function MapPage() {
   // Заряд самоката поездки: панель поездки показывает его рядом с состоянием и обновляет вместе
   // с парком — приезжает тем же потоком, что и остальные данные.
   const rideBattery = rideScooter?.batteryPct ?? null;
+  // Замена на случай, когда батарея садится: ближайший свободный самокат к текущему. Считаем по
+  // данным парка, поэтому подсказка живая — самокаты рядом меняются вместе с потоком.
+  const rideReplacement = useMemo(() => {
+    if (rideScooter === null) {
+      return null;
+    }
+    const from = { lat: rideScooter.lat, lng: rideScooter.lng };
+    let best: { code: string; distanceM: number } | null = null;
+    for (const scooter of scooters) {
+      if (scooter.status !== 'free') {
+        continue;
+      }
+      const distanceM = scooterDistanceM(scooter, from);
+      if (best === null || distanceM < best.distanceM) {
+        best = { code: scooter.code, distanceM };
+      }
+    }
+    return best;
+  }, [rideScooter, scooters]);
   // Завершить поездку можно только внутри зоны: самокат сам не двигается (симулятор — S9),
   // но положение берём из данных, а не из предположений интерфейса.
   const canFinishHere =
@@ -160,6 +180,7 @@ export function MapPage() {
               void handleFinishRide();
             }}
             batteryPct={rideBattery}
+            replacement={rideReplacement}
             onSteer={(direction, stepM) => {
               void ride.steer(direction, stepM);
             }}

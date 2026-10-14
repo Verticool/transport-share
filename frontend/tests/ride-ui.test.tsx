@@ -28,6 +28,7 @@ function renderPanel(overrides: Partial<Parameters<typeof RidePanel>[0]> = {}) {
     onSteer: vi.fn(),
     onDrain: vi.fn(),
     batteryPct: 62,
+    replacement: null,
     ...overrides,
   };
   render(<RidePanel {...props} />);
@@ -82,6 +83,31 @@ describe('RidePanel', () => {
 
     // Шаг по умолчанию — обычный, 20 м: крупный включается переключателем в центре крестовины.
     expect(props.onSteer).toHaveBeenCalledWith('north', 20);
+  });
+
+  it('предупреждает о низком заряде и подсказывает замену', () => {
+    renderPanel({ batteryPct: 15, replacement: { code: 'SC-012', distanceM: 400 } });
+
+    // Порог общий с доменом: ниже 20 % самокат становится недоступным и отключается сам.
+    const warning = screen.getByTestId('ride-low-battery');
+    expect(warning).toHaveTextContent('Батарея почти пуста: заряд 15 %');
+    expect(warning).toHaveTextContent('Пора искать замену');
+    expect(warning).toHaveTextContent('SC-012');
+    expect(warning).toHaveTextContent('400 м');
+  });
+
+  it('без свободных рядом подсказка обходится словами, а не пустым кодом', () => {
+    renderPanel({ batteryPct: 8, replacement: null });
+
+    expect(screen.getByTestId('ride-low-battery')).toHaveTextContent(
+      'свободных самокатов рядом сейчас нет',
+    );
+  });
+
+  it('при достаточном заряде предупреждения нет', () => {
+    renderPanel({ batteryPct: 62 });
+
+    expect(screen.queryByTestId('ride-low-battery')).toBeNull();
   });
 
   it('показывает заряд самоката прямо в панели поездки', () => {
