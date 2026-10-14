@@ -111,7 +111,8 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
       throw badRequest('Не понял, на сколько минут сократить бронь');
     }
 
-    const booking = await bookings.shorten(parsed.data.id, user.id, body.data['minutes']);
+    const { minutes } = body.data;
+    const booking = await bookings.shorten(parsed.data.id, user.id, minutes);
     const result = await bookings.tick();
     for (const expired of result.expired) {
       hub.broadcastBookingExpired(expired.id);
@@ -213,12 +214,10 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
       throw badRequest('Не понял, куда двигать самокат');
     }
 
-    const snapshot = await rides.steer(
-      parsed.data.id,
-      user.id,
-      body.data['direction'],
-      body.data['stepM'],
-    );
+    // Деструктуризация, а не обращение через скобки: настройка `noPropertyAccessFromIndexSignature`
+    // запрещает доступ через точку, а правило линта — через скобки. Деструктуризация проходит оба.
+    const { direction, stepM } = body.data;
+    const snapshot = await rides.steer(parsed.data.id, user.id, direction, stepM);
     // Самокат сдвинулся — об этом должны узнать все, кто смотрит карту.
     await announceScooter(snapshot.ride.scooterId);
     return reply.code(200).send(snapshot);
