@@ -102,7 +102,11 @@ export function RidePanel({
   const paused = status === 'paused';
   // Заряд ниже порога: самокат скоро отключится сам, поэтому предупреждаем заранее и предлагаем
   // замену. Порог общий с доменом — тот же, по которому самокат становится недоступным в парке.
-  const lowBattery = batteryPct !== null && batteryPct < LOW_BATTERY_THRESHOLD;
+  // Предупреждение показывается, только пока поездка активна: у завершённой поездки оно
+  // оставалось висеть с советом «искать замену», который уже ни к чему.
+  const lowBattery = batteryPct !== null && batteryPct < LOW_BATTERY_THRESHOLD && status !== 'finished';
+  // Ноль — это не «почти пуста»: самокат уже отключён, и текст про это, а не про замену.
+  const batteryEmpty = lowBattery && batteryPct === 0;
   // Шаг руля: 20 м — обычный, 200 м — крупный, чтобы быстро выехать за границу зоны для проверки.
   const [stepM, setStepM] = useState<number>(STEER_STEP_M);
 
@@ -149,13 +153,13 @@ export function RidePanel({
         </dl>
 
         {offline && (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive" role="status">
+          <p className="rounded-lg border border-destructive/40 bg-notice-danger px-3 py-2 text-xs text-destructive" role="status">
             Связь пропала — поездка идёт, счёт продолжается. Покажем актуальные данные, когда связь вернётся.
           </p>
         )}
 
         {error !== null && (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive" role="alert">
+          <p className="rounded-lg border border-destructive/40 bg-notice-danger px-3 py-2 text-xs text-destructive" role="alert">
             {error}
           </p>
         )}
@@ -187,24 +191,28 @@ export function RidePanel({
 
         {lowBattery && (
           <div
-            className="flex flex-col gap-1 rounded-lg border border-destructive/30 bg-destructive/10 p-3"
+            className="flex flex-col gap-1 rounded-lg border border-destructive/40 bg-notice-danger p-3"
             data-testid="ride-low-battery"
             role="status"
           >
             <p className="break-words text-xs font-medium text-destructive">
-              {`Батарея почти пуста: заряд ${batteryPct ?? 0} %. Самокат отключится сам, и поездка закроется по разряду.`}
+              {batteryEmpty
+                ? 'Самокат разряжен: мотор больше не тянет. Дотолкайте его в зону и завершите поездку.'
+                : `Батарея почти пуста: заряд ${batteryPct ?? 0} %. Самокат отключится сам, и поездка закроется по разряду.`}
             </p>
             <p className="break-words text-xs text-muted-foreground">
-              {replacement === null
-                ? 'Пора искать замену: свободных самокатов рядом сейчас нет — вернитесь в зону и завершите поездку.'
-                : `Пора искать замену: ближайший свободный — ${replacement.code}, ${formatDistance(replacement.distanceM)}. Завершите поездку в зоне и возьмите его.`}
+              {batteryEmpty
+                ? 'Пока поездка открыта, время продолжает тарифицироваться.'
+                : replacement === null
+                  ? 'Пора искать замену: свободных самокатов рядом сейчас нет — вернитесь в зону и завершите поездку.'
+                  : `Пора искать замену: ближайший свободный — ${replacement.code}, ${formatDistance(replacement.distanceM)}. Завершите поездку в зоне и возьмите его.`}
             </p>
           </div>
         )}
 
         {!canFinishHere && (
           <div
-            className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3"
+            className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-notice-danger p-3"
             data-testid="outside-zone"
           >
             <p className="text-xs text-destructive">

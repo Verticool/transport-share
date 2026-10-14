@@ -9,11 +9,12 @@ import { useNotificationsStore, type Notice, type NoticeTone } from '../../store
 /** Сколько всплывающее оповещение висит само, если у него не задано своё время. */
 const DEFAULT_AUTO_HIDE_MS = 6000;
 
+// Оповещение всплывает поверх карты: фон непрозрачный, иначе сквозь него читается подложка.
 const TONE_CLASS: Record<NoticeTone, string> = {
-  info: 'border-border bg-card',
-  warning: 'border-status-busy/50 bg-status-busy/10',
-  danger: 'border-destructive/50 bg-destructive/10',
-  success: 'border-status-free/50 bg-status-free/10',
+  info: 'border-border bg-notice-info',
+  warning: 'border-status-in-ride/50 bg-notice-warning',
+  danger: 'border-destructive/50 bg-notice-danger',
+  success: 'border-status-free/50 bg-notice-success',
 };
 
 /**

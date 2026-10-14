@@ -41,6 +41,14 @@
   --input: oklch(0.91 0.01 260);
   --ring: oklch(0.62 0.16 150);
 
+  /* Оповещения: поверхности непрозрачные. Оповещение часто висит над картой и над списком,
+     полупрозрачный фон просвечивал чужим текстом и читался как сломанная вёрстка. */
+  // Тон мягкий: поверхность читается как подложка, а цвет несёт полоса и иконка.
+  --notice-info-surface: oklch(0.97 0.005 260);
+  --notice-warning-surface: oklch(0.97 0.035 85);
+  --notice-danger-surface: oklch(0.97 0.02 25);
+  --notice-success-surface: oklch(0.97 0.03 150);
+
   /* Статусы самоката — часть темы: их читает и интерфейс, и канвас карты. */
   --status-free: oklch(0.62 0.16 150);
   --status-reserved: oklch(0.55 0.19 262);
@@ -83,6 +91,13 @@
   --input: oklch(0.32 0.015 260);
   --ring: oklch(0.72 0.17 150);
 
+  /* Тёмная тема: поверхности те же четыре, но заметно темнее — непрозрачные, чтобы под ними
+     не просвечивали карта и таблица. */
+  --notice-info-surface: oklch(0.29 0.015 260);
+  --notice-warning-surface: oklch(0.31 0.05 85);
+  --notice-danger-surface: oklch(0.3 0.055 25);
+  --notice-success-surface: oklch(0.29 0.05 150);
+
   /* На тёмной подложке статусы светлее, иначе маркеры «проваливаются». */
   --status-free: oklch(0.78 0.17 150);
   --status-reserved: oklch(0.72 0.15 262);
@@ -118,6 +133,11 @@
   --color-status-reserved: var(--status-reserved);
   --color-status-in-ride: var(--status-in-ride);
   --color-status-unavailable: var(--status-unavailable);
+
+  --color-notice-info: var(--notice-info-surface);
+  --color-notice-warning: var(--notice-warning-surface);
+  --color-notice-danger: var(--notice-danger-surface);
+  --color-notice-success: var(--notice-success-surface);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

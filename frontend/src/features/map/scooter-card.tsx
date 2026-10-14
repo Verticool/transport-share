@@ -47,6 +47,10 @@ export function ScooterCard({
   const info = SCOOTER_STATUS_INFO[scooter.status];
   const bookable = scooter.status === 'free' && blockedBy === null;
 
+  // Взять можно только свободный самокат: у забронированного и у того, что уже в поездке, совет
+  // о заряде не по адресу, а у недоступного он висел, пока карточка открыта.
+  const canBeTaken = scooter.status === 'free';
+
   return (
     <Card data-testid="scooter-card">
       <CardHeader className="relative">
@@ -65,14 +69,19 @@ export function ScooterCard({
       </CardHeader>
 
       <CardContent className="flex flex-col gap-3">
-        {/* Предупреждаем до брони: с таким зарядом поездка будет короткой, и человек вправе выбрать другой. */}
-        {scooter.batteryPct < LOW_BATTERY_THRESHOLD && (
+        {/* Предупреждаем до брони: с таким зарядом поездка будет короткой, и человек вправе выбрать
+            другой. Показываем только там, где самокат реально можно взять: у недоступного (в том
+            числе разряженного в ноль) совет «поездка будет короткой» висел постоянно и ничего не
+            сообщал — там уже стоит бейдж «Недоступен». */}
+        {canBeTaken && scooter.batteryPct < LOW_BATTERY_THRESHOLD && (
           <p
-            className="break-words rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+            className="break-words rounded-lg border border-status-in-ride/40 bg-notice-warning px-3 py-2 text-xs text-status-in-ride"
             data-testid="scooter-low-battery"
             role="status"
           >
-            {`Батарея почти пуста — заряд ${scooter.batteryPct} %: самокат отключится сам, поездка будет короткой.`}
+            {scooter.batteryPct === 0
+              ? 'Самокат разряжен — до замены батареи взять его нельзя.'
+              : `Батарея почти пуста — заряд ${scooter.batteryPct} %: самокат отключится сам, поездка будет короткой.`}
           </p>
         )}
         <div className="flex items-center gap-2">
@@ -86,7 +95,7 @@ export function ScooterCard({
         </div>
 
         {error !== null && (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive" role="alert">
+          <p className="rounded-lg border border-destructive/40 bg-notice-danger px-3 py-2 text-xs text-destructive" role="alert">
             {error}
           </p>
         )}

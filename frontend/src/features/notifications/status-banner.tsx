@@ -11,11 +11,13 @@ import { useNotificationsStore, type NoticeTone } from '../../stores/notificatio
  * Полоса держится, пока состояние не снято: в отличие от всплывающих оповещений её нельзя
  * «пропустить», потому что она всегда на виду — даже когда взгляд на карте.
  */
+// Фоны — непрозрачные токены темы: полоса живёт над картой и списком, а просвечивающий фон
+// смешивался с их содержимым. Вдобавок `status-busy` в теме нет — классы тона были пустыми.
 const TONE_CLASS: Record<NoticeTone, string> = {
-  info: 'border-border bg-secondary text-secondary-foreground',
-  warning: 'border-status-busy/40 bg-status-busy/10 text-status-busy',
-  danger: 'border-destructive/40 bg-destructive/10 text-destructive',
-  success: 'border-status-free/40 bg-status-free/10 text-status-free',
+  info: 'border-border bg-notice-info text-muted-foreground',
+  warning: 'border-status-in-ride/40 bg-notice-warning text-status-in-ride',
+  danger: 'border-destructive/40 bg-notice-danger text-destructive',
+  success: 'border-status-free/40 bg-notice-success text-status-free',
 };
 
 const TONE_ICON: Record<NoticeTone, LucideIcon> = {

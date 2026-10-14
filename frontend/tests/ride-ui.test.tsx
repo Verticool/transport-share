@@ -104,6 +104,23 @@ describe('RidePanel', () => {
     );
   });
 
+  it('при нулевом заряде говорит о разряде, а не о короткой поездке', () => {
+    renderPanel({ batteryPct: 0, replacement: null });
+
+    const warning = screen.getByTestId('ride-low-battery');
+    expect(warning).toHaveTextContent('Самокат разряжен');
+    expect(warning).toHaveTextContent('Дотолкайте его в зону');
+    // Текст про замену здесь не нужен: самокат уже не едет.
+    expect(warning).not.toHaveTextContent('Пора искать замену');
+  });
+
+  it('у завершённой поездки предупреждение о заряде снято', () => {
+    // Раньше блок оставался висеть с советом «пора искать замену» и после завершения поездки.
+    renderPanel({ status: 'finished', batteryPct: 4 });
+
+    expect(screen.queryByTestId('ride-low-battery')).toBeNull();
+  });
+
   it('при достаточном заряде предупреждения нет', () => {
     renderPanel({ batteryPct: 62 });
 
