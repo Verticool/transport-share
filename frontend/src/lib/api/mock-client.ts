@@ -15,6 +15,7 @@ import {
   formatMinor,
   isInsideZone,
   moveTowards,
+  steeredPosition,
   zoneCenter,
   toIso,
   type Booking,
@@ -26,6 +27,7 @@ import {
   type RidePause,
   type Scooter,
   type ServiceZone,
+  type SteerDirection,
   type Tariff,
 } from '@sharing/shared';
 import { z, type ZodType } from 'zod';
@@ -684,6 +686,30 @@ export class MockApiClient implements ApiClient {
     const onBoundary = clampToZone({ lat: scooter.lat, lng: scooter.lng }, SERVICE_ZONE);
     const inside = moveTowards(onBoundary, zoneCenter(SERVICE_ZONE), 25);
     this.state.positions.set(scooter.id, inside);
+
+    return this.rideSnapshot(ride);
+  }
+
+  async steerRide(rideId: string, direction: SteerDirection, token: string): Promise<RideSnapshot> {
+    await this.applyDelay();
+    const userId = await this.requireUserId(token);
+    const ride = this.requireRide(rideId, userId);
+    if (ride.status === 'finished') {
+      throw new ApiClientError('conflict', 'Поездка уже завершена');
+    }
+    if (ride.status === 'paused') {
+      // Пауза — это выключенный мотор: самокат не должен ехать ни сам, ни по кнопке.
+      throw new ApiClientError('conflict', 'На паузе самокат не двигается: сначала продолжите поездку');
+    }
+
+    const scooters = await this.loadScooters();
+    const scooter = scooters.find((item) => item.id === ride.scooterId);
+    if (scooter === undefined) {
+      throw new ApiClientError('not_found', 'Самокат не найден');
+    }
+
+    const position = this.state.positions.get(scooter.id) ?? { lat: scooter.lat, lng: scooter.lng };
+    this.state.positions.set(scooter.id, steeredPosition(position, direction));
 
     return this.rideSnapshot(ride);
   }

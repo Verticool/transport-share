@@ -290,13 +290,85 @@ suite('счета и письма', () => {
     expect(letter?.subject.startsWith('Счёт за поездку')).toBe(true);
   });
 
-  it('самокат вне зоны: мотор заблокирован, поездка идёт, время капает; возврат в зону её продолжает', async () => {
+  it('пауза выключает мотор: самокат не двигается и не тратит заряд', async () => {
     const token = await reset();
     const { rideId, scooterId } = await startRide(token);
 
-    // Самокат выехал за границу зоны. В жизни его мотор в этот момент блокируется: сам он не
-    // поедет, и человек разворачивает его и везёт обратно. Поездка при этом не закрывается —
-    // иначе клиент не платил бы за время, которое провёл, толкая самокат.
+    const paused = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/pause`,
+      headers: auth(token),
+    });
+    expect(paused.statusCode).toBe(200);
+
+    const positionBefore = await pool.query<{ lat: number; lng: number; battery_pct: number }>(
+      'SELECT lat, lng, battery_pct FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    // Несколько тиков: на паузе самокат стоит на месте и заряд не расходует — иначе «пауза»
+    // двигала бы технику и жгла батарею, хотя мотор выключен.
+    for (let i = 0; i < 5; i += 1) {
+      await bundle.simulator.tick();
+    }
+    const positionAfter = await pool.query<{ lat: number; lng: number; battery_pct: number }>(
+      'SELECT lat, lng, battery_pct FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    expect(positionAfter.rows[0]?.lat).toBe(positionBefore.rows[0]?.lat);
+    expect(positionAfter.rows[0]?.lng).toBe(positionBefore.rows[0]?.lng);
+    expect(positionAfter.rows[0]?.battery_pct).toBe(positionBefore.rows[0]?.battery_pct);
+
+    // Руль на паузе тоже не работает: мотор выключен.
+    const steer = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/steer`,
+      payload: { direction: 'north' },
+      headers: auth(token),
+    });
+    expect(steer.statusCode).toBe(409);
+  });
+
+  it('руль двигает самокат: этим проверяют выезд за зону и возврат', async () => {
+    const token = await reset();
+    const { rideId, scooterId } = await startRide(token);
+
+    const before = await pool.query<{ lat: number; lng: number }>(
+      'SELECT lat, lng FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    const steer = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/steer`,
+      payload: { direction: 'north' },
+      headers: auth(token),
+    });
+    expect(steer.statusCode).toBe(200);
+
+    const after = await pool.query<{ lat: number; lng: number }>(
+      'SELECT lat, lng FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    // Шаг 20 м на север: широта растёт, долгота почти не меняется.
+    expect((after.rows[0]?.lat ?? 0) - (before.rows[0]?.lat ?? 0)).toBeGreaterThan(0.0001);
+    expect(Math.abs((after.rows[0]?.lng ?? 0) - (before.rows[0]?.lng ?? 0))).toBeLessThan(0.0001);
+
+    // Неизвестная сторона — понятная ошибка, а не 500.
+    const wrong = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/steer`,
+      payload: { direction: 'вверх' },
+      headers: auth(token),
+    });
+    expect(wrong.statusCode).toBe(400);
+  });
+
+  it('самокат вне зоны: мотор работает, поездка идёт, завершить нельзя до возврата в зону', async () => {
+    const token = await reset();
+    const { rideId, scooterId } = await startRide(token);
+
+    // Самокат выехал за границу зоны. Мотор при этом работает: самокат едет (человек может
+    // вернуться своим ходом), но завершить поездку за границей нельзя — иначе клиент закрывал бы
+    // поездку, оставив самокат неизвестно где.
     await pool.query('UPDATE scooters SET lat = 43.5, lng = 74.0 WHERE id = $1', [scooterId]);
     const positionBefore = await pool.query<{ lat: number; lng: number }>(
       'SELECT lat, lng FROM scooters WHERE id = $1',
@@ -311,13 +383,15 @@ suite('счета и письма', () => {
     expect(afterTick.rows[0]?.status).toBe('active');
     expect(afterTick.rows[0]?.end_reason).toBeNull();
 
-    // Симулятор не сдвинул самокат: он стоит на месте, пока его не вывезут.
+    // Симулятор ведёт самокат обратно в зону: мотор включён, самокат не стоит мёртво.
     const positionAfter = await pool.query<{ lat: number; lng: number }>(
       'SELECT lat, lng FROM scooters WHERE id = $1',
       [scooterId],
     );
-    expect(positionAfter.rows[0]?.lat).toBe(positionBefore.rows[0]?.lat);
-    expect(positionAfter.rows[0]?.lng).toBe(positionBefore.rows[0]?.lng);
+    expect(
+      (positionAfter.rows[0]?.lat ?? 0) !== positionBefore.rows[0]?.lat ||
+        (positionAfter.rows[0]?.lng ?? 0) !== positionBefore.rows[0]?.lng,
+    ).toBe(true);
 
     // Завершить поездку здесь нельзя: сначала самокат должен оказаться в зоне.
     const finishOutside = await bundle.app.inject({

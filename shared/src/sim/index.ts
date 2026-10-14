@@ -71,11 +71,17 @@ export interface FleetStepResult {
   depletedIds: string[];
 }
 
-function applyNoise(from: LatLng, zone: ServiceZone, noiseM: number, rng: () => number): LatLng {
+/**
+ * GPS-шум вокруг точки.
+ *
+ * Зону здесь не трогаем: прижимать к ней шум решает вызывающий, и только для самоката, который
+ * был внутри. Иначе самокат, выведенный за границу, мгновенно «телепортировался» бы назад —
+ * и запрет завершения вне зоны нельзя было бы ни увидеть, ни проверить.
+ */
+function applyNoise(from: LatLng, noiseM: number, rng: () => number): LatLng {
   const bearing = rng() * 360;
   const distance = rng() * noiseM;
-  const noisy = moveByBearing(from, distance, bearing);
-  return isInsideZone(noisy, zone) ? noisy : clampToZone(noisy, zone);
+  return moveByBearing(from, distance, bearing);
 }
 
 function drainForStep(drainPctPerMin: number, dtSeconds: number, remainder: number): {
@@ -166,8 +172,12 @@ export function stepScooter(scooter: SimScooter, opts: StepOptions): StepResult 
   }
 
   if (movedM > 0 || (movedM === 0 && scooter.status === 'in_ride' && scooter.target !== null)) {
-    const noisy = applyNoise(current, zone, gpsNoiseM, rng);
-    current = isInsideZone(noisy, zone) ? noisy : clampToZone(noisy, zone);
+    const noisy = applyNoise(current, gpsNoiseM, rng);
+    // Внутри зоны шум не должен выкидывать самокат за границу — прижимаем к зоне. А вот самокат,
+    // который уже за границей (его вывели рулём), прижимать нельзя: тогда «за границей» превращалось
+    // бы в мгновенный возврат, и проверить запрет завершения вне зоны было бы невозможно.
+    const wasInside = isInsideZone({ lat: scooter.lat, lng: scooter.lng }, zone);
+    current = wasInside && !isInsideZone(noisy, zone) ? clampToZone(noisy, zone) : noisy;
   }
 
   const { drainPct, newRemainder } = drainForStep(drainPctPerMin, dtSeconds, scooter.batteryRemainder);

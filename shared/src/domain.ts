@@ -1,3 +1,4 @@
+import { z } from 'zod';
 /**
  * Доменные типы сервиса шеринга самокатов.
  * Источник истины — docs/DOMAIN.md. Меняем только вместе с ним.
@@ -17,6 +18,15 @@ export type UnixMs = number;
 
 export const SCOOTER_STATUSES = ['free', 'reserved', 'in_ride', 'unavailable'] as const;
 export type ScooterStatus = (typeof SCOOTER_STATUSES)[number];
+
+/**
+ * Сторона, в которую сдвигают самокат из интерфейса.
+ *
+ * Руль для стенда: симулятор возит самокат сам и только внутри зоны обслуживания, поэтому
+ * проверить выезд за границу и возврат в зону без ручного управления нельзя.
+ */
+export const SteerDirectionSchema = z.enum(['north', 'south', 'east', 'west']);
+export type SteerDirection = z.infer<typeof SteerDirectionSchema>;
 
 export const BOOKING_STATUSES = ['active', 'consumed', 'expired', 'cancelled'] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];

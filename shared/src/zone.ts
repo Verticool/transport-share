@@ -1,4 +1,4 @@
-import type { LatLng, ServiceZone } from './domain.ts';
+import type { LatLng, ServiceZone, SteerDirection } from './domain.ts';
 
 export const EARTH_RADIUS_M = 6371008.8;
 
@@ -324,6 +324,33 @@ export function moveByBearing(from: LatLng, distanceM: number, bearingDeg: numbe
     lat: toDeg(lat2),
     lng: toDeg(lng2),
   };
+}
+
+/** Шаг ручного управления самокатом: 20 м за нажатие — этого хватает, чтобы выехать за зону. */
+export const STEER_STEP_M = 20;
+
+/** Азимут стороны света: север 0°, восток 90°, юг 180°, запад 270°. */
+export function bearingOf(direction: SteerDirection): number {
+  switch (direction) {
+    case 'north':
+      return 0;
+    case 'east':
+      return 90;
+    case 'south':
+      return 180;
+    case 'west':
+      return 270;
+  }
+}
+
+/**
+ * Куда сдвинется самокат при нажатии стороны света.
+ *
+ * Общая функция домена: мок-клиент и сервер обязаны двигать самокат одинаково, иначе проверка
+ * сценариев «выехал за зону — вернулся» даёт разные результаты в зависимости от источника данных.
+ */
+export function steeredPosition(from: LatLng, direction: SteerDirection): LatLng {
+  return moveByBearing(from, STEER_STEP_M, bearingOf(direction));
 }
 
 export function bearingDeg(from: LatLng, to: LatLng): number {

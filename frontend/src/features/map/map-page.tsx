@@ -138,6 +138,9 @@ export function MapPage() {
             onFinish={() => {
               void handleFinishRide();
             }}
+            onSteer={(direction) => {
+              void ride.steer(direction);
+            }}
             onPushToZone={() => {
               void ride.pushToZone();
             }}

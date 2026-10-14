@@ -4,8 +4,11 @@ import {
   SERVICE_ZONE,
   SIM,
   SIM_TICK_MS,
+  bearingDeg,
   calcRidePrice,
   isInsideZone,
+  moveByBearing,
+  zoneCenter,
 } from '@sharing/shared';
 import { createRng, pickWaypoint, stepFleet } from '@sharing/shared/sim';
 import type { LatLng, ScooterDelta } from '@sharing/shared';
@@ -92,22 +95,19 @@ export class ParkSimulator {
   }
 
   /**
-   * Цель движения самоката: у занятых — точка в зоне, у свободных — покой.
+   * Цель движения самоката: у идущих поездок — точка в зоне, у остальных — покой.
    *
    * Важно пересчитывать цель, когда самокат встал в поездку: запомненный «покой» от прошлого
    * тика иначе оставался бы навсегда, и самокат не двигался бы вовсе (на это указывала живая
    * проверка: поездка идёт, а координаты в базе не меняются).
+   *
+   * `rideable` — это «мотор включён»: самокат в поездке едет, на паузе — нет (пауза и означает,
+   * что питание снято: самокат не движется и заряд не тратит). Граница зоны обслуживания мотор не
+   * выключает: за границей самокат едет, но завершить там поездку нельзя — сначала надо вернуться
+   * в зону (это проверяет `RideService.finish`).
    */
-  private targetFor(id: string, position: LatLng, riding: boolean): LatLng | null {
-    if (!riding) {
-      this.targets.set(id, null);
-      return null;
-    }
-
-    // Самокат вне зоны обслуживания: мотор заблокирован, сам он никуда не поедет.
-    // Так это выглядит в жизни, когда человек выехал за границу зоны — технику приходится
-    // довозить обратно; поездка при этом не закрывается, и время продолжает тарифицироваться.
-    if (!isInsideZone(position, SERVICE_ZONE)) {
+  private targetFor(id: string, position: LatLng, rideable: boolean): LatLng | null {
+    if (!rideable) {
       this.targets.set(id, null);
       return null;
     }
@@ -117,7 +117,12 @@ export class ParkSimulator {
       return known;
     }
 
-    const target = pickWaypoint(position, SERVICE_ZONE, this.rng);
+    // Самокат за границей: он на ходу (питание есть), но человек уже вне зоны — цель ставим
+    // наружу, а не в центр: иначе техника мгновенно возвращалась бы в зону, и состояние
+    // «поездка идёт, завершить нельзя» нельзя было бы ни увидеть, ни проверить.
+    const target = isInsideZone(position, SERVICE_ZONE)
+      ? pickWaypoint(position, SERVICE_ZONE, this.rng)
+      : moveByBearing(position, 500, bearingDeg(zoneCenter(SERVICE_ZONE), position));
     this.targets.set(id, target);
     return target;
   }
@@ -129,7 +134,11 @@ export class ParkSimulator {
   async tick(): Promise<ScooterDelta[]> {
     const rows = await listScooterRows(this.pool);
     const openRides = (await listOpenRideRows(this.pool)).map(toRide);
-    const ridingScooterIds = new Set(openRides.map((ride) => ride.scooterId));
+    // Едут только самокаты с ИДУЩЕЙ поездкой: пауза означает выключенный мотор, поэтому самокат
+    // стоит на месте и заряд не расходует (иначе «пауза» тратила бы батарею и двигала технику).
+    const ridingScooterIds = new Set(
+      openRides.filter((ride) => ride.status === 'active').map((ride) => ride.scooterId),
+    );
 
     const state = rows.map((row) => {
       const position: LatLng = { lat: row.lat, lng: row.lng };

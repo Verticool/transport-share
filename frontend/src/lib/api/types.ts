@@ -1,3 +1,4 @@
+import type { SteerDirection } from '@sharing/shared';
 import type {
   Booking,
   EmailMessage,
@@ -71,6 +72,13 @@ export interface ApiClient {
    * что самокат довезли обратно в зелёную зону — после этого движение продолжается.
    */
   pushRideToZone(rideId: string, token: string): Promise<RideSnapshot>;
+  /**
+   * Управление самокатом в поездке: сдвиг на шаг в выбранную сторону.
+   *
+   * Руль для стенда: без него нельзя проверить ни выезд за зону обслуживания, ни возврат в неё —
+   * симулятор возит самокат сам и только внутри зоны. На паузе мотор выключен, движение отклоняется.
+   */
+  steerRide(rideId: string, direction: SteerDirection, token: string): Promise<RideSnapshot>;
 
   /** Вход по email и паролю. Неверные данные — ошибка с кодом `unauthorized`. */
   login(email: string, password: string): Promise<SessionSnapshot>;

@@ -47,4 +47,6 @@ export const unauthorized = (message = 'Нужно войти в аккаунт'
 export const notFound = (message = 'Не найдено'): ApiProblem => new ApiProblem('not_found', message);
 export const conflict = (message: string): ApiProblem => new ApiProblem('conflict', message);
 export const invalidPayload = (message: string): ApiProblem => new ApiProblem('invalid_payload', message);
+/** Запрос понятен по форме, но бессмысленный: например, неизвестная сторона движения. */
+export const badRequest = (message: string): ApiProblem => new ApiProblem('invalid_payload', message);
 export const outsideZone = (message: string): ApiProblem => new ApiProblem('outside_zone', message);

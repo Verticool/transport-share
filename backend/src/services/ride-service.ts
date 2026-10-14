@@ -9,8 +9,10 @@ import {
   formatMinor,
   isInsideZone,
   moveTowards,
+  steeredPosition,
   zoneCenter,
 } from '@sharing/shared';
+import type { SteerDirection } from '@sharing/shared';
 import type { Invoice, Iso, Ride, RidePause, Tariff } from '@sharing/shared';
 import type { Pool, PoolClient } from 'pg';
 
@@ -145,6 +147,36 @@ export class RideService {
       const onBoundary = clampToZone(position, SERVICE_ZONE);
       const inside = moveTowards(onBoundary, zoneCenter(SERVICE_ZONE), 25);
       await setScooterPosition(client, scooter.id, inside);
+
+      const updated = await findRideRowById(client, row.id);
+      return this.snapshot(client, updated ?? row);
+    });
+  }
+
+  /**
+   * Управление самокатом в поездке: сдвиг на шаг в выбранную сторону.
+   *
+   * Это замена рулю для стенда: без него нельзя проверить ни выезд за зону обслуживания, ни
+   * возврат в неё — симулятор возит самокат сам и всегда внутри зоны. На паузе мотор выключен,
+   * поэтому движение отклоняется: пауза и означает «самокат не едет».
+   */
+  async steer(rideId: string, userId: string, direction: SteerDirection): Promise<RideSnapshot> {
+    return withTransaction(this.pool, async (client) => {
+      const row = await this.requireOwnRide(client, rideId, userId);
+      if (row.status === 'finished') {
+        throw conflict('Поездка уже завершена');
+      }
+      if (row.status === 'paused') {
+        throw conflict('На паузе самокат не двигается: сначала продолжите поездку');
+      }
+
+      const scooter = await findScooterRow(client, row.scooter_id);
+      if (scooter === null) {
+        throw notFound('Самокат не найден');
+      }
+
+      const moved = steeredPosition({ lat: scooter.lat, lng: scooter.lng }, direction);
+      await setScooterPosition(client, scooter.id, moved);
 
       const updated = await findRideRowById(client, row.id);
       return this.snapshot(client, updated ?? row);

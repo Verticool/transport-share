@@ -1,5 +1,6 @@
-import { formatDuration, formatMinor, type Minor, type RideStatus } from '@sharing/shared';
-import { Pause, Play, Square } from 'lucide-react';
+import { formatDuration, formatMinor, type Minor, type RideStatus, type SteerDirection } from '@sharing/shared';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Pause, Play, Square } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -25,8 +26,10 @@ export interface RidePanelProps {
   onPause: () => void;
   onResume: () => void;
   onFinish: () => void;
-  /** Возврат самоката в зону: за границей мотор заблокирован, доехать можно только «на руках». */
+  /** Возврат самоката в зону: за границей завершить поездку нельзя. */
   onPushToZone: () => void;
+  /** Руль для проверки границы зоны: сдвинуть самокат на шаг в выбранную сторону. */
+  onSteer: (direction: SteerDirection) => void;
 }
 
 /**
@@ -35,6 +38,25 @@ export interface RidePanelProps {
  * Кнопка завершения неактивна вне зоны обслуживания — пользователь видит причину рядом с кнопкой,
  * а не узнаёт об отказе после нажатия (серверная проверка при этом остаётся: интерфейс не источник истины).
  */
+/** Кнопка руля: одна сторона света, крупная цель для нажатия. */
+function SteerButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Button type="button" variant="outline" size="icon" aria-label={label} disabled={disabled} onClick={onClick}>
+      {children}
+    </Button>
+  );
+}
+
 export function RidePanel({
   scooterCode,
   status,
@@ -51,6 +73,7 @@ export function RidePanel({
   onResume,
   onFinish,
   onPushToZone,
+  onSteer,
 }: RidePanelProps) {
   const paused = status === 'paused';
 
@@ -128,20 +151,58 @@ export function RidePanel({
         </div>
 
         {!canFinishHere && (
-          <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3" data-testid="outside-zone">
+          <div
+            className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3"
+            data-testid="outside-zone"
+          >
             <p className="text-xs text-destructive">
-              Самокат за границей зоны: мотор заблокирован, сам он не поедет. Поездка не закрыта —
-              время и минуты продолжают тарифицироваться, пока самокат не окажется в зелёной зоне.
+              Самокат за границей зоны обслуживания — завершить поездку здесь нельзя, пока он не
+              вернётся в зелёную зону. Поездка не закрыта: время и минуты продолжают
+              тарифицироваться.
             </p>
             <p className="text-xs text-muted-foreground">
-              Разверните самокат и довезите его до зоны (в демонстрации это делает кнопка ниже —
-              GPS здесь эмулируется), после чего поездку можно завершить.
+              Самокат на ходу, так что доехать до зоны можно рулём (ниже) — или вернуть его
+              одним действием.
             </p>
             <Button type="button" variant="outline" size="sm" onClick={onPushToZone} disabled={busy}>
-              Дотолкать самокат в зону
+              Вернуть самокат в зону
             </Button>
           </div>
         )}
+
+        {/* Руль стенда: у настоящего самоката его нет, но без него нельзя проверить границу зоны —
+            симулятор возит технику сам и всегда внутри зоны. На паузе мотор выключен, поэтому
+            кнопки недоступны: сначала нужно продолжить поездку. */}
+        <div className="flex flex-col gap-2 rounded-lg border p-3" data-testid="ride-steer">
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-medium">Управление самокатом</span>
+            <span className="text-xs text-muted-foreground">20 м за нажатие</span>
+          </div>
+          <div className="grid w-32 grid-cols-3 justify-items-center gap-1 self-center">
+            <span aria-hidden />
+            <SteerButton label="Сдвинуть самокат на север" disabled={busy || paused} onClick={() => onSteer('north')}>
+              <ArrowUp className="size-4" aria-hidden />
+            </SteerButton>
+            <span aria-hidden />
+            <SteerButton label="Сдвинуть самокат на запад" disabled={busy || paused} onClick={() => onSteer('west')}>
+              <ArrowLeft className="size-4" aria-hidden />
+            </SteerButton>
+            <span aria-hidden />
+            <SteerButton label="Сдвинуть самокат на восток" disabled={busy || paused} onClick={() => onSteer('east')}>
+              <ArrowRight className="size-4" aria-hidden />
+            </SteerButton>
+            <span aria-hidden />
+            <SteerButton label="Сдвинуть самокат на юг" disabled={busy || paused} onClick={() => onSteer('south')}>
+              <ArrowDown className="size-4" aria-hidden />
+            </SteerButton>
+            <span aria-hidden />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {paused
+              ? 'На паузе мотор выключен — сначала продолжите поездку.'
+              : 'Нужно, чтобы проверить границу зоны: выехать за неё и вернуться.'}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

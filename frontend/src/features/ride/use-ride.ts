@@ -6,6 +6,7 @@ import {
   type Minor,
   type Ride,
   type RidePause,
+  type SteerDirection,
   type Tariff,
 } from '@sharing/shared';
 import { useCallback, useEffect, useState } from 'react';
@@ -41,6 +42,12 @@ export interface RideState {
   finish: () => Promise<void>;
   /** Возврат самоката в зону обслуживания, если он оказался за границей. */
   pushToZone: () => Promise<void>;
+  /**
+   * Руль: сдвинуть самокат на шаг в выбранную сторону.
+   *
+   * Нужен, чтобы проверить сценарии границы зоны: без него самокат возит симулятор и всегда внутри.
+   */
+  steer: (direction: SteerDirection) => Promise<void>;
 }
 
 export interface UseRideOptions {
@@ -218,8 +225,21 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
     return runAction(() => clientInstance.finishRide(ride.id, token), 'Не удалось завершить поездку');
   }, [runAction, clientInstance, ride, token]);
 
-  // Самокат за границей зоны: мотор заблокирован. Действие — эмуляция того, что самокат довезли
-  // обратно в зелёную зону (в жизни его везут руками, здесь нет реального GPS).
+  const steer = useCallback(
+    (direction: SteerDirection) => {
+      if (ride === null || token === null) {
+        return Promise.resolve();
+      }
+      return runAction(
+        () => clientInstance.steerRide(ride.id, direction, token),
+        'Не удалось сдвинуть самокат',
+      );
+    },
+    [runAction, clientInstance, ride, token],
+  );
+
+  // Самокат за границей зоны: завершить поездку там нельзя. Действие — быстрый возврат в зелёную
+  // зону (в жизни до границы доезжают рулём или довозят самокат руками).
   const pushToZone = useCallback(() => {
     if (ride === null || token === null) {
       return Promise.resolve();
@@ -246,5 +266,6 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
     resume,
     finish,
     pushToZone,
+    steer,
   };
 }

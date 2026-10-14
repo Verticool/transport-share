@@ -19,6 +19,7 @@ import type {
   RidePause,
   Scooter,
   ServiceZone,
+  SteerDirection,
   Tariff,
 } from '@sharing/shared';
 import { z } from 'zod';
@@ -347,6 +348,22 @@ export class HttpApiClient implements ApiClient {
 
   async pushRideToZone(rideId: string, token: string) {
     return this.rideAction(rideId, 'push-to-zone', token);
+  }
+
+  async steerRide(rideId: string, direction: SteerDirection, token: string) {
+    const parsed = RideResponseSchema.parse(
+      await this.authorized(`/api/rides/${rideId}/steer`, token, {
+        method: 'POST',
+        body: JSON.stringify({ direction }),
+      }),
+    );
+    // Форма ответа та же, что у остальных действий поездки: снимок с тарифом и временем сервера.
+    return {
+      ride: parsed.ride,
+      pauses: parsed.pauses,
+      tariff: HttpApiClient.tariffOf(parsed.tariff),
+      serverTime: parsed.serverTime,
+    };
   }
 
   async login(email: string, password: string): Promise<{ user: PublicUser; token: string; refreshToken: string }> {

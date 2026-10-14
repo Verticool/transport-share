@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { SECOND_DEMO, clickMarker, ensureIdle, pickFreeScooter, signIn, clearAccount } from './helpers';
+import { z } from 'zod';
+
+import { SECOND_DEMO, clickMarker, clearAccount, ensureIdle, nav, pickFreeScooter, signIn } from './helpers';
+
+/** Формы ответов сервера, нужные только этому сценарию. */
+const SessionSchema = z.object({ token: z.string() });
+const RidesPageSchema = z.object({ items: z.array(z.object({ id: z.string() })) });
 
 /** Число поездок из подписи «Всего поездок: N» на странице истории. */
 async function countRides(page: Page): Promise<number> {
@@ -54,4 +60,27 @@ test('поездка с карты под вторым демо-входом: б
   // Поездка записана на этого пользователя: он видит её в своей истории, и она уже не «идёт».
   expect(await countRides(page)).toBeGreaterThan(0);
   await expect(page.getByTestId('rides-list').getByText('Идёт')).toHaveCount(0);
+
+  // Письмо со счётом: после завершения поездки оно должно прийти на почту — это требование ТЗ
+  // (почта эмулируется, но письмо настоящее: его видно во «Входящих»).
+  await nav(page, 'Входящие');
+  const inbox = page.getByTestId('inbox-list');
+  await expect(inbox).toContainText('Счёт');
+  const letters = await inbox.getByRole('listitem').count();
+
+  // Идемпотентность: повторное завершение уже закрытой поездки не проходит, а значит второго
+  // счёта и второго письма не появляется.
+  const login = await page.request.post('/api/auth/login', { data: SECOND_DEMO });
+  const session = SessionSchema.parse(await login.json());
+  const auth = { authorization: `Bearer ${session.token}` };
+  const ridesPage = RidesPageSchema.parse(await (await page.request.get('/api/rides?limit=1', { headers: auth })).json());
+  const lastRideId = ridesPage.items[0]?.id;
+  if (lastRideId === undefined) {
+    throw new Error('в истории нет ни одной поездки');
+  }
+  const response = await page.request.post(`/api/rides/${lastRideId}/finish`, { headers: auth });
+  expect([404, 409, 422]).toContain(response.status());
+  await page.reload();
+  await nav(page, 'Входящие');
+  expect(await page.getByTestId('inbox-list').getByRole('listitem').count()).toBe(letters);
 });

@@ -25,6 +25,7 @@ function renderPanel(overrides: Partial<Parameters<typeof RidePanel>[0]> = {}) {
     onResume: vi.fn(),
     onFinish: vi.fn(),
     onPushToZone: vi.fn(),
+    onSteer: vi.fn(),
     ...overrides,
   };
   render(<RidePanel {...props} />);
@@ -71,17 +72,35 @@ describe('RidePanel', () => {
     expect(props.onFinish).toHaveBeenCalledTimes(1);
   });
 
+  it('руль двигает самокат на шаг в выбранную сторону', async () => {
+    const user = userEvent.setup();
+    const props = renderPanel();
+
+    await user.click(screen.getByRole('button', { name: 'Сдвинуть самокат на север' }));
+
+    expect(props.onSteer).toHaveBeenCalledWith('north');
+  });
+
+  it('на паузе руль недоступен и объясняет почему: пауза — это выключенный мотор', () => {
+    renderPanel({ status: 'paused' });
+
+    for (const label of ['Сдвинуть самокат на север', 'Сдвинуть самокат на юг', 'Сдвинуть самокат на запад', 'Сдвинуть самокат на восток']) {
+      expect(screen.getByRole('button', { name: label })).toBeDisabled();
+    }
+    expect(screen.getByTestId('ride-steer')).toHaveTextContent('На паузе мотор выключен');
+  });
+
   it('вне зоны: завершение недоступно, объяснено почему и предложено вернуть самокат', async () => {
     const user = userEvent.setup();
     const props = renderPanel({ canFinishHere: false });
 
     expect(screen.getByRole('button', { name: /Завершить/ })).toBeDisabled();
     const block = screen.getByTestId('outside-zone');
-    // Мотор заблокирован, но поездка не закрыта — человек должен понимать, что время идёт.
-    expect(block).toHaveTextContent('мотор заблокирован');
+    // Поездка не закрыта, время идёт — человек должен понимать и почему, и что делать.
+    expect(block).toHaveTextContent('завершить поездку здесь нельзя');
     expect(block).toHaveTextContent('продолжают тарифицироваться');
 
-    await user.click(screen.getByRole('button', { name: 'Дотолкать самокат в зону' }));
+    await user.click(screen.getByRole('button', { name: 'Вернуть самокат в зону' }));
     expect(props.onPushToZone).toHaveBeenCalledTimes(1);
   });
 

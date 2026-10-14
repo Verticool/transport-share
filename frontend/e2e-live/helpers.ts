@@ -16,6 +16,12 @@ const ActiveRideSchema = z.object({ ride: z.object({ id: z.string() }).nullable(
 export const DEMO = { email: 'demo@sharing.kg', password: 'demo1234' };
 export const SECOND_DEMO = { email: 'demo2@sharing.kg', password: 'demo1234' };
 
+/** Переход по разделу в шапке: «Входящие», «Счета», «Поездки». */
+export async function nav(page: Page, label: string): Promise<void> {
+  await page.getByRole('link', { name: label }).click();
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+}
+
 export async function signIn(page: Page, account: { email: string; password: string }): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Почта').fill(account.email);

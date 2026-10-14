@@ -1,9 +1,9 @@
-import { CreateBookingRequestSchema, RidesQuerySchema } from '@sharing/shared';
+import { CreateBookingRequestSchema, RidesQuerySchema, SteerDirectionSchema } from '@sharing/shared';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
 
-import { invalidPayload, notFound } from '../http/errors';
+import { badRequest, invalidPayload, notFound } from '../http/errors';
 import { requireBearerToken } from '../http/context';
 import { listInvoiceRowsForUser, listEmailRowsForUser } from '../repo/invoices';
 import { findScooterRow } from '../repo/scooters';
@@ -16,6 +16,9 @@ import type { RideService } from '../services/ride-service';
 
 const BookingIdParamsSchema = z.object({ id: z.string().min(1) });
 const RideIdParamsSchema = z.object({ id: z.string().min(1) });
+
+/** Тело управления самокатом: сторона света, в которую его сдвигают. */
+const SteerRequestSchema = z.object({ direction: SteerDirectionSchema });
 const StartRideBodySchema = z.object({ bookingId: z.string().min(1) });
 
 export interface SharingRoutesOptions {
@@ -142,8 +145,8 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
     return reply.code(200).send(await rides.pause(parsed.data.id, user.id));
   });
 
-  // Самокат вне зоны обслуживания: мотор заблокирован, поездка идёт, время тарифицируется.
-  // Действие сообщает, что самокат довезли обратно в зелёную зону (см. RideService.pushToZone).
+  // Самокат вне зоны обслуживания: поездка идёт, время тарифицируется, завершить её там нельзя.
+  // Действие сообщает, что самокат вернули в зелёную зону (см. RideService.pushToZone).
   app.post('/api/rides/:id/push-to-zone', async (request, reply) => {
     const user = await auth.userByAccessToken(requireBearerToken(request));
     const parsed = RideIdParamsSchema.safeParse(request.params);
@@ -153,6 +156,26 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
 
     const snapshot = await rides.pushToZone(parsed.data.id, user.id);
     // Положение самоката изменилось — об этом должны узнать все, кто смотрит карту.
+    await announceScooter(snapshot.ride.scooterId);
+    return reply.code(200).send(snapshot);
+  });
+
+  // Управление самокатом в поездке: руль для стенда. Без него нельзя проверить ни выезд за зону
+  // обслуживания, ни возврат в неё: симулятор возит самокат сам и всегда внутри зоны.
+  app.post('/api/rides/:id/steer', async (request, reply) => {
+    const user = await auth.userByAccessToken(requireBearerToken(request));
+    const parsed = RideIdParamsSchema.safeParse(request.params);
+    if (!parsed.success) {
+      throw notFound('Поездка не найдена');
+    }
+
+    const body = SteerRequestSchema.safeParse(request.body);
+    if (!body.success) {
+      throw badRequest('Не понял, куда двигать самокат');
+    }
+
+    const snapshot = await rides.steer(parsed.data.id, user.id, body.data['direction']);
+    // Самокат сдвинулся — об этом должны узнать все, кто смотрит карту.
     await announceScooter(snapshot.ride.scooterId);
     return reply.code(200).send(snapshot);
   });
