@@ -1,6 +1,11 @@
-import { Mail, Map, Receipt, Route, UserRound, type LucideIcon } from 'lucide-react';
+import { Bell, BellOff, Mail, Map, Receipt, Route, UserRound, type LucideIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
+import { StatusBanner } from '../../features/notifications/status-banner';
+import { Toaster } from '../../features/notifications/toaster';
+import { useConnectivity } from '../../features/notifications/use-connectivity';
+import { notifySoundEnabled, setNotifySoundEnabled } from '../../lib/notify-sound';
 import { ThemeToggle } from '../ui/theme-toggle';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
@@ -26,10 +31,38 @@ const NAV_ITEMS: { to: string; label: string; end: boolean; icon: LucideIcon }[]
 export function AppShell() {
   const user = useSessionStore((state) => state.user);
   const navigate = useNavigate();
+  // Связь отслеживается на уровне каркаса: полоса «нет интернета» должна быть видна на любом экране.
+  useConnectivity();
+  const [soundOn, setSoundOn] = useState(() => notifySoundEnabled());
+  const headerRef = useRef<HTMLElement | null>(null);
+  const bannerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const updateOffset = (): void => {
+      const headerHeight = headerRef.current?.offsetHeight ?? 56;
+      const bannerHeight = bannerRef.current?.offsetHeight ?? 0;
+      document.documentElement.style.setProperty('--notify-offset', `${headerHeight + bannerHeight}px`);
+    };
+
+    updateOffset();
+    const observer = new ResizeObserver(updateOffset);
+    if (headerRef.current !== null) {
+      observer.observe(headerRef.current);
+    }
+    if (bannerRef.current !== null) {
+      observer.observe(bannerRef.current);
+    }
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-3 sm:gap-4 sm:px-4">
+      <header
+        ref={headerRef}
+        className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-3 sm:gap-4 sm:px-4"
+      >
         <NavLink to="/" className="flex items-baseline gap-0.5" aria-label="Движ — на главную">
           <span className="text-lg font-semibold tracking-tight">движ</span>
           <span className="text-lg font-semibold text-primary">.</span>
@@ -62,6 +95,18 @@ export function AppShell() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={soundOn ? 'Выключить звук оповещений' : 'Включить звук оповещений'}
+            onClick={() => {
+              const next = !soundOn;
+              setSoundOn(next);
+              setNotifySoundEnabled(next);
+            }}
+          >
+            {soundOn ? <Bell aria-hidden /> : <BellOff aria-hidden />}
+          </Button>
           <ThemeToggle />
           {user === null ? (
             <Button variant="outline" size="sm" onClick={() => void navigate('/login')}>
@@ -76,6 +121,13 @@ export function AppShell() {
           )}
         </div>
       </header>
+
+      {/* Полоса состояний меняет высоту (сколько состояний — столько полос), поэтому её высота
+          вместе с хедером отдаётся в CSS: всплывающие оповещения встают ниже них, а не поверх. */}
+      <div ref={bannerRef}>
+        <StatusBanner />
+      </div>
+      <Toaster />
 
       <main className="min-h-0 flex-1 overflow-hidden">
         <Outlet />

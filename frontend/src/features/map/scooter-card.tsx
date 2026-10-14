@@ -68,7 +68,7 @@ export function ScooterCard({
         {/* Предупреждаем до брони: с таким зарядом поездка будет короткой, и человек вправе выбрать другой. */}
         {scooter.batteryPct < LOW_BATTERY_THRESHOLD && (
           <p
-            className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+            className="break-words rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
             data-testid="scooter-low-battery"
             role="status"
           >

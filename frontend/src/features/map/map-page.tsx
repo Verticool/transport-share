@@ -1,4 +1,4 @@
-import { isInsideZone } from '@sharing/shared';
+import { LOW_BATTERY_THRESHOLD, isInsideZone } from '@sharing/shared';
 import type { ScooterStatus } from '@sharing/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -11,6 +11,7 @@ import { MapCanvas } from './map-canvas';
 import { ParkPanel } from './park-panel';
 import { ScooterCard } from './scooter-card';
 import { scooterDistanceM } from '../../lib/map/scooter-layer';
+import { useNotificationsStore } from '../../stores/notifications';
 import { usePark } from './use-park';
 import { SCOOTER_STATUS_ORDER } from '../../config/scooter-status';
 import { useSessionStore } from '../../stores/session';
@@ -102,8 +103,6 @@ export function MapPage() {
       : (scooters.find((scooter) => scooter.id === ride.ride?.scooterId) ?? null);
 
   const activeRide = ride.ride !== null && ride.ride.status !== 'finished';
-  // Поездка или бронь появились — поднимаем колонку к началу: панель с управлением должна быть
-  // видна сразу, а не оставаться прокрученной вниз к списку парка.
   const panelKey = ride.ride === null ? (booking === null ? null : 'booking') : 'ride';
   useEffect(() => {
     if (panelKey !== null) {
@@ -113,6 +112,12 @@ export function MapPage() {
   // Заряд самоката поездки: панель поездки показывает его рядом с состоянием и обновляет вместе
   // с парком — приезжает тем же потоком, что и остальные данные.
   const rideBattery = rideScooter?.batteryPct ?? null;
+  const setPersistent = useNotificationsStore((state) => state.setPersistent);
+  const clearPersistent = useNotificationsStore((state) => state.clearPersistent);
+  const toast = useNotificationsStore((state) => state.toast);
+  // О всплывающем предупреждении помним по идентификатору поездки: оно нужно один раз за поездку.
+  const lowBatteryNotifiedRef = useRef<string | null>(null);
+  const finishedNotifiedRef = useRef<string | null>(null);
   // Замена на случай, когда батарея садится: ближайший свободный самокат к текущему. Считаем по
   // данным парка, поэтому подсказка живая — самокаты рядом меняются вместе с потоком.
   const rideReplacement = useMemo(() => {
@@ -136,6 +141,58 @@ export function MapPage() {
   // но положение берём из данных, а не из предположений интерфейса.
   const canFinishHere =
     rideScooter === null || isInsideZone({ lat: rideScooter.lat, lng: rideScooter.lng }, ZONE);
+
+  // Низкий заряд: постоянная полоса под хедером (её видно с любого экрана) плюс одно всплывающее
+  // предупреждение за поездку. Раньше это жило только внутри панели поездки и терялось.
+  useEffect(() => {
+    if (!activeRide || rideBattery === null) {
+      clearPersistent('low-battery');
+      return;
+    }
+    if (rideBattery >= LOW_BATTERY_THRESHOLD) {
+      clearPersistent('low-battery');
+      return;
+    }
+
+    setPersistent({
+      key: 'low-battery',
+      title: `Батарея почти пуста: заряд ${rideBattery} %`,
+      description: 'Самокат отключится сам — пора искать замену и завершить поездку в зоне.',
+      tone: 'warning',
+    });
+
+    const rideId = ride.ride?.id ?? null;
+    if (rideId !== null && lowBatteryNotifiedRef.current !== rideId) {
+      lowBatteryNotifiedRef.current = rideId;
+      toast({
+        key: 'low-battery',
+        title: `Батарея почти пуста: заряд ${rideBattery} %`,
+        description: 'Пора искать замену: самокат скоро отключится сам.',
+        tone: 'warning',
+        autoHideMs: 8000,
+      });
+    }
+  }, [activeRide, rideBattery, ride.ride?.id, clearPersistent, setPersistent, toast]);
+  // Поездка или бронь появились — поднимаем колонку к началу: панель с управлением должна быть
+  // видна сразу, а не оставаться прокрученной вниз к списку парка.
+  // Поездка закрылась по разряду: сообщаем всплывающим оповещением и убираем полосу про батарею.
+  useEffect(() => {
+    const current = ride.ride;
+    if (current === null) {
+      return;
+    }
+    if (current.status === 'finished' && current.endReason === 'battery_depleted' && finishedNotifiedRef.current !== current.id) {
+      finishedNotifiedRef.current = current.id;
+      clearPersistent('low-battery');
+      toast({
+        key: 'ride-battery-finished',
+        title: 'Поездка завершена: самокат разрядился',
+        description: 'Счёт отправлен во «Входящие», самокат в парке помечен недоступным.',
+        tone: 'info',
+        autoHideMs: 9000,
+      });
+    }
+  }, [ride.ride, clearPersistent, toast]);
 
   return (
     // Экран занимает всю доступную высоту: на телефоне карта получает верхнюю половину, панель —

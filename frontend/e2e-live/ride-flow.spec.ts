@@ -72,6 +72,11 @@ test('поездка с карты под вторым демо-входом: б
   await expect(warning).toBeVisible();
   await expect(warning).toContainText('Пора искать замену');
 
+  // То же предупреждение видно с любого экрана: постоянная полоса под хедером и всплывающее
+  // оповещение поверх — чтобы не приходилось лезть в почту или счета, чтобы понять, что случилось.
+  await expect(page.getByTestId('status-banner-low-battery')).toContainText('Батарея почти пуста');
+  await expect(page.getByTestId('toast-low-battery')).toBeVisible();
+
 
   await page.getByTestId('ride-panel').getByRole('button', { name: 'Завершить' }).click();
   await expect(page.getByTestId('ride-panel')).toHaveCount(0);

@@ -191,10 +191,10 @@ export function RidePanel({
             data-testid="ride-low-battery"
             role="status"
           >
-            <p className="text-xs font-medium text-destructive">
+            <p className="break-words text-xs font-medium text-destructive">
               {`Батарея почти пуста: заряд ${batteryPct ?? 0} %. Самокат отключится сам, и поездка закроется по разряду.`}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="break-words text-xs text-muted-foreground">
               {replacement === null
                 ? 'Пора искать замену: свободных самокатов рядом сейчас нет — вернитесь в зону и завершите поездку.'
                 : `Пора искать замену: ближайший свободный — ${replacement.code}, ${formatDistance(replacement.distanceM)}. Завершите поездку в зоне и возьмите его.`}
