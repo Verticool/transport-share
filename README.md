@@ -22,7 +22,7 @@ Node.js 22 + Fastify 5 + pg + ws (бэкенд) · PostgreSQL 17 · Docker Compo
 ## Быстрый старт
 
 ```bash
-git clone <репозиторий> && cd transport-sharing
+git clone https://github.com/Verticool/transport-share.git && cd transport-share
 docker compose up -d --build      # три контейнера: база, бэкенд, фронт
 ```
 
