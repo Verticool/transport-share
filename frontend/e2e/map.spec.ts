@@ -41,7 +41,7 @@ test.describe('карта парка', () => {
 
     // Требование стенда: парк показан целиком, в том числе во время поездки — так проверяются
     // сценарии. Пользователь должен понимать, что это отступление от рабочего приложения.
-    await expect(page.getByTestId('park-visibility-note')).toContainText('Показаны все самокаты');
+    await expect(page.getByTestId('park-visibility-note')).toContainText('Парк показан целиком');
     await expect(page.getByTestId('park-visibility-note')).toContainText('только ваш самокат и зона');
     await expect(page.getByTestId('park-list').getByRole('button')).toHaveCount(40);
   });
@@ -110,6 +110,32 @@ test.describe('карта парка', () => {
     }
     expect(rowBox.y).toBeGreaterThanOrEqual(listBox.y - 1);
     expect(rowBox.y + rowBox.height).toBeLessThanOrEqual(listBox.y + listBox.height + 1);
+  });
+
+  test('на телефоне ничего не уезжает за экран: хедер, карта и панель парка', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(page.getByTestId('park-list').getByRole('button').first()).toBeVisible();
+
+    // Горизонтального переполнения быть не должно: на этой ширине уезжала кнопка входа и часть панели.
+    const metrics = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+
+    // Карта занимает верхнюю часть экрана, панель — остальное, обе видны целиком.
+    const map = await page.getByTestId('map-canvas').boundingBox();
+    const list = await page.getByTestId('park-list').boundingBox();
+    if (map === null || list === null) {
+      throw new Error('карта или список не найдены');
+    }
+    expect(map.height).toBeGreaterThan(180);
+    expect(map.y + map.height).toBeLessThanOrEqual(844);
+    expect(list.height).toBeGreaterThan(60);
+
+    // Шапка колонок не переносится: подписи совпадают с числами.
+    await expect(page.getByTestId('park-list-header')).toContainText('До центра');
   });
 
   test('панель парка считает сводку по статусам', async ({ page }) => {

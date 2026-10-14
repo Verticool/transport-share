@@ -5,6 +5,8 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { StatusBadge } from '../../components/ui/status-badge';
 import { SERVICE_ZONE, zoneCenter } from '@sharing/shared';
+
+import { scrollRowIntoList } from './park-list-scroll';
 import {
   SCOOTER_STATUS_DOT_CLASS,
   SCOOTER_STATUS_INFO,
@@ -59,8 +61,7 @@ export function ParkPanel({
     if (selectedId === null) {
       return;
     }
-    const row = listRef.current?.querySelector(`[data-scooter-id="${selectedId}"]`);
-    row?.scrollIntoView({ block: 'nearest' });
+    scrollRowIntoList(listRef.current, listRef.current?.querySelector(`[data-scooter-id="${selectedId}"]`) ?? null);
   }, [selectedId]);
 
   // Точка отсчёта одна и та же для всего парка — центр зоны обслуживания. Это НЕ «сколько проехал
@@ -102,9 +103,9 @@ export function ParkPanel({
         {/* Примечание о видимости точек: в учебном стенде парк показан целиком всегда — так
             удобнее проверять сценарии. В рабочем приложении во время поездки на карте остались бы
             только самокат клиента и зона обслуживания. */}
-        <p className="text-xs text-muted-foreground" data-testid="park-visibility-note">
-          Показаны все самокаты — и во время поездки тоже: так удобнее тестировать. В рабочем
-          приложении во время поездки на карте видны только ваш самокат и зона обслуживания.
+        <p className="text-[11px] leading-snug text-muted-foreground" data-testid="park-visibility-note">
+          Парк показан целиком, в том числе в поездке, — это стенд для проверки. В рабочем
+          приложении во время поездки видны только ваш самокат и зона.
         </p>
 
         <ul className="grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Фильтр по состоянию">
@@ -165,12 +166,16 @@ export function ParkPanel({
           </div>
         )}
 
+        {/* Шапка колонок той же сеткой, что и строки: иначе числа не совпадают с подписями.
+            Подпись колонки важна: это удалённость от центра зоны, а не путь поездки. */}
         {error === null && visible.length > 0 && (
-          <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground" data-testid="park-list-header">
+          <div
+            className="grid grid-cols-[minmax(0,1fr)_2.5rem_4.5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
+            data-testid="park-list-header"
+          >
             <span className="font-medium">Самокат</span>
-            <span className="ml-auto w-14 text-center">Заряд</span>
-            {/* Подпись важна: колонка показывает удалённость от центра зоны, а не путь поездки. */}
-            <span className="w-14 text-right">До центра зоны</span>
+            <span className="text-right">Заряд</span>
+            <span className="whitespace-nowrap text-right">До центра</span>
           </div>
         )}
 
@@ -191,16 +196,21 @@ export function ParkPanel({
                   onClick={() => onSelect(scooter.id)}
                   aria-current={scooter.id === selectedId}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent',
+                    'grid w-full grid-cols-[minmax(0,1fr)_2.5rem_4.5rem] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent',
                     scooter.id === selectedId && 'bg-accent',
                   )}
                 >
-                  <span className="font-medium">{scooter.code}</span>
-                  <StatusBadge status={scooter.status} />
-                  <span className="tabular ml-auto text-xs text-muted-foreground">
+                  {/* Код и состояние делят первую колонку: состояние усекается, а не выдавливает
+                      числа за край строки. */}
+                  <span className="flex min-w-0 items-center gap-2">
+                    {/* Код не переносится: «SC-040» в две строки ломало ровные строки таблицы. */}
+                    <span className="whitespace-nowrap font-medium">{scooter.code}</span>
+                    <StatusBadge status={scooter.status} className="min-w-0 truncate" />
+                  </span>
+                  <span className="tabular text-right text-xs text-muted-foreground">
                     {formatPercent(scooter.batteryPct)}
                   </span>
-                  <span className="tabular w-14 text-right text-xs text-muted-foreground">
+                  <span className="tabular text-right text-xs text-muted-foreground">
                     {formatDistance(distances.get(scooter.id) ?? 0)}
                   </span>
                 </button>

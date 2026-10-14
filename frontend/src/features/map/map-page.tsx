@@ -37,6 +37,9 @@ export function MapPage() {
   const ride = useRide();
   const token = useSessionStore((state) => state.token);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Колонка панелей: при старте поездки или появлении брони её содержимое поднимается к началу,
+  // иначе верхний блок (поездка с управлением) остаётся выше области просмотра.
+  const asideRef = useRef<HTMLDivElement | null>(null);
   // Фильтр состояний общий для карты и списка: снятая галочка убирает маркеры с карты.
   const [statusFilter, setStatusFilter] = useState<ScooterStatus[]>(() => [...SCOOTER_STATUS_ORDER]);
   const toggleStatus = useCallback((status: ScooterStatus): void => {
@@ -98,6 +101,14 @@ export function MapPage() {
       : (scooters.find((scooter) => scooter.id === ride.ride?.scooterId) ?? null);
 
   const activeRide = ride.ride !== null && ride.ride.status !== 'finished';
+  // Поездка или бронь появились — поднимаем колонку к началу: панель с управлением должна быть
+  // видна сразу, а не оставаться прокрученной вниз к списку парка.
+  const panelKey = ride.ride === null ? (booking === null ? null : 'booking') : 'ride';
+  useEffect(() => {
+    if (panelKey !== null) {
+      asideRef.current?.scrollTo({ top: 0 });
+    }
+  }, [panelKey]);
   // Заряд самоката поездки: панель поездки показывает его рядом с состоянием и обновляет вместе
   // с парком — приезжает тем же потоком, что и остальные данные.
   const rideBattery = rideScooter?.batteryPct ?? null;
@@ -107,8 +118,10 @@ export function MapPage() {
     rideScooter === null || isInsideZone({ lat: rideScooter.lat, lng: rideScooter.lng }, ZONE);
 
   return (
-    <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="relative min-h-[420px] overflow-hidden rounded-xl border">
+    // Экран занимает всю доступную высоту: на телефоне карта получает верхнюю половину, панель —
+    // остальное и прокручивается сама. Иначе карта сжималась, а панель выдавливала её за экран.
+    <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(200px,45%)_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-1 lg:gap-4 lg:p-4">
+      <div className="relative min-h-0 overflow-hidden rounded-xl border">
         <MapCanvas
           scooters={visibleScooters}
           selectedId={selectedId ?? ride.ride?.scooterId ?? null}
@@ -119,7 +132,11 @@ export function MapPage() {
         />
       </div>
 
-      <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto" aria-label="Панель парка">
+      <aside
+        ref={asideRef}
+        className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-0.5 lg:gap-4"
+        aria-label="Панель парка"
+      >
         {activeRide && ride.ride !== null && rideScooter !== null && (
           <RidePanel
             scooterCode={rideScooter.code}

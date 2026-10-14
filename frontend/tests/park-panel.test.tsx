@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ParkPanel } from '../src/features/map/park-panel';
+import { scrollRowIntoList } from '../src/features/map/park-list-scroll';
 
 /**
  * Панель парка: счётчик, легенда, фильтр и список. Проверяем именно поведение для пользователя —
@@ -62,7 +63,8 @@ describe('ParkPanel', () => {
     const header = screen.getByTestId('park-list-header');
     expect(header).toHaveTextContent('Самокат');
     expect(header).toHaveTextContent('Заряд');
-    expect(header).toHaveTextContent('До центра зоны');
+    // Подпись короткая: «До центра» — в узкой колонке длинная строка переносилась и разъезжалась.
+    expect(header).toHaveTextContent('До центра');
     expect(screen.getByTestId('park-list')).toHaveAttribute(
       'aria-label',
       'Самокаты: удалённость от центра зоны обслуживания',
@@ -120,9 +122,9 @@ describe('ParkPanel', () => {
     // Мы намеренно показываем весь парк всегда: так проверяются сценарии. Пользователь должен
     // видеть, что во время поездки это отступление, а не поведение рабочего приложения.
     const note = screen.getByTestId('park-visibility-note');
-    expect(note).toHaveTextContent('Показаны все самокаты');
-    expect(note).toHaveTextContent('во время поездки');
-    expect(note).toHaveTextContent('только ваш самокат и зона обслуживания');
+    expect(note).toHaveTextContent('Парк показан целиком');
+    expect(note).toHaveTextContent('в поездке');
+    expect(note).toHaveTextContent('только ваш самокат и зона');
   });
 
   it('показывает, сколько строк скрыто фильтром: список — это не весь парк', () => {
@@ -136,15 +138,24 @@ describe('ParkPanel', () => {
     expect(Number(counted?.[1])).toBeLessThan(Number(counted?.[2]));
   });
 
-  it('подводит список к выбранному самокату: строка могла быть вне вида', () => {
-    const scrollIntoView = vi.fn();
-    // В jsdom прокрутки нет: проверяем сам вызов — он и есть «подвести список к выбору».
-    Element.prototype.scrollIntoView = scrollIntoView;
+  it('подводит список к выбранному самокату, двигая только список', () => {
+    // Строка выше видимой части списка: список должен прокрутиться вверх на разницу.
+    const list = { scrollTop: 300, getBoundingClientRect: () => ({ top: 100, bottom: 300 }) };
+    const row = { getBoundingClientRect: () => ({ top: 60, bottom: 90 }) };
+    scrollRowIntoList(list, row);
+    expect(list.scrollTop).toBe(260);
 
-    // Выбор приходит извне (клик по маркеру на карте), список отсортирован по удалённости.
-    renderPanel({ selectedId: 'far' });
+    // Строка ниже видимой части: прокрутка вниз.
+    const below = { scrollTop: 100, getBoundingClientRect: () => ({ top: 100, bottom: 300 }) };
+    const lowRow = { getBoundingClientRect: () => ({ top: 320, bottom: 350 }) };
+    scrollRowIntoList(below, lowRow);
+    expect(below.scrollTop).toBe(150);
 
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    // Строка уже в виде — список не двигается (иначе колонка панелей «прыгает»).
+    const inside = { scrollTop: 100, getBoundingClientRect: () => ({ top: 100, bottom: 300 }) };
+    const seenRow = { getBoundingClientRect: () => ({ top: 150, bottom: 180 }) };
+    scrollRowIntoList(inside, seenRow);
+    expect(inside.scrollTop).toBe(100);
   });
 
   it('кнопка «Показать все состояния» возвращает полный фильтр', async () => {

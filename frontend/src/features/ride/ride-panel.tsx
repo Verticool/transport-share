@@ -198,11 +198,23 @@ export function RidePanel({
             симулятор возит технику сам и всегда внутри зоны. На паузе мотор выключен, поэтому
             кнопки недоступны: сначала нужно продолжить поездку. */}
         <div className="flex flex-col gap-2 rounded-lg border p-3" data-testid="ride-steer">
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium">Управление самокатом</span>
-            <span className="text-xs text-muted-foreground">20 м за нажатие</span>
+            {/* Разряд — в строке заголовка: отдельной кнопкой снизу он уезжал за пределы экрана
+                на телефоне (замер 390 px: кнопка на 881 при высоте окна 844). */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={busy || paused || batteryPct === 0}
+              onClick={() => onDrain(10)}
+              data-testid="ride-drain"
+            >
+              −10 % заряда
+            </Button>
           </div>
-          <div className="grid w-32 grid-cols-3 justify-items-center gap-1 self-center">
+          <div className="grid w-40 grid-cols-3 justify-items-center gap-1 self-center">
             <span aria-hidden />
             <SteerButton label="Сдвинуть самокат на север" disabled={busy || paused} onClick={() => onSteer('north', stepM)}>
               <ArrowUp className="size-4" aria-hidden />
@@ -219,7 +231,7 @@ export function RidePanel({
               aria-pressed={stepM === STEER_BIG_STEP_M}
               disabled={busy}
               onClick={() => setStepM(stepM === STEER_STEP_M ? STEER_BIG_STEP_M : STEER_STEP_M)}
-              className="tabular h-6 min-w-11 rounded-full border bg-background px-2 text-[11px] font-medium transition-colors hover:bg-accent disabled:opacity-50"
+              className="tabular h-7 min-w-16 whitespace-nowrap rounded-full border bg-background px-2 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-50"
               data-testid="steer-step"
             >
               {stepM} м
@@ -233,23 +245,11 @@ export function RidePanel({
             </SteerButton>
             <span aria-hidden />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs leading-snug text-muted-foreground">
             {paused
               ? 'На паузе мотор выключен — сначала продолжите поездку.'
-              : 'Нужно, чтобы проверить границу зоны: выехать за неё и вернуться.'}
+              : 'Шаг руля: 20 м (обычный) или 200 м — чтобы быстро выехать за зону. Разряд нужен для проверки автофиниша: заряд падает на процент в минуту, ждать этого час.'}
           </p>
-          {/* В жизни заряд падает примерно на процент в минуту, поэтому автофиниш по разряду
-              проверяют этой кнопкой, а не часом ожидания. */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy || paused || batteryPct === 0}
-            onClick={() => onDrain(10)}
-            data-testid="ride-drain"
-          >
-            −10 % заряда
-          </Button>
         </div>
       </CardContent>
     </Card>

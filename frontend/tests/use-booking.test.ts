@@ -140,12 +140,12 @@ describe('useBooking', () => {
       throw new Error('бронь не создана');
     }
     let stale = 1;
-    client.getActiveBooking = async () => {
+    client.getActiveBooking = () => {
       if (stale > 0) {
         stale -= 1;
-        return { booking: stuck, serverTime: new Date().toISOString() };
+        return Promise.resolve({ booking: stuck, serverTime: new Date().toISOString() });
       }
-      return null;
+      return Promise.resolve(null);
     };
 
     await advance(BOOKING_TTL_MINUTES + 1);
