@@ -128,3 +128,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File E:/llama.cpp/ram-guard.ps1
 | WS не подключается | прокси не передаёт заголовки Upgrade | проверить блок `location /ws` в `frontend/nginx.conf` (в репо) |
 | Пустая карта | сид не выполнился | `docker compose exec backend npm run seed`, проверить `SEED_ON_START` |
 | Данные «застряли» в старом состоянии | остался том прошлого запуска | `docker compose down -v && docker compose up --build` |
+
+## Если правки не видны в браузере
+
+Фронт в контейнере раздаётся nginx: `index.html` отдаётся с `Cache-Control: no-cache`, файлы
+сборки (`/assets/*.js`, имена с хешем) — `public, immutable`. Проверить одной командой:
+
+```
+curl -sI http://localhost:8088/ | grep -i cache        # ожидаем no-cache, must-revalidate
+```
+
+Если видите старую сборку — сначала пересоберите образ (`docker compose up -d --build frontend`),
+затем обновите страницу. Кэш браузера чистится жёсткой перезагрузкой (Ctrl+Shift+R).
