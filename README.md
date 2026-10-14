@@ -22,9 +22,14 @@ Node.js 22 + Fastify 5 + pg + ws (бэкенд) · PostgreSQL 17 · Docker Compo
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/Verticool/transport-share.git && cd transport-share
-docker compose up -d --build      # три контейнера: база, бэкенд, фронт
+git clone https://github.com/Verticool/transport-share.git
+cd transport-share
+docker compose up -d --build
 ```
+
+Три команды по очереди: склонировать, перейти в каталог, собрать и запустить три контейнера
+(база, бэкенд, фронт). Строки разделены намеренно — так набор команд одинаково работает в любом
+терминале (bash, PowerShell, cmd) и его можно просто выполнить построчно.
 
 Интерфейс — <http://localhost:8088>. Схема и данные применяются автоматически: одноразовые сервисы
 `db-migrate` (миграции) и `db-seed` (наполнение из `mock/`) выполняются до старта бэкенда — порядок
@@ -52,11 +57,20 @@ compose, поэтому запуск работает и без правок; п
 | `BOOKING_TICK_MS` | `5000` | шаг обслуживания броней (снятие просроченных, предупреждение) |
 | `VITE_API_MODE` | `http` | источник данных в собранном фронте: `http` — с сервера, `mock` — из `mock/*.json` без базы |
 
-Занят порт — три равнозначных способа:
+Занят порт (или нужен другой) — поменяйте `FRONTEND_PORT` в `.env` и выполните
 
 ```bash
-FRONTEND_PORT=8090 docker compose up -d        # разово, без правки файлов
-printf 'FRONTEND_PORT=8090\n' >> .env && docker compose up -d   # навсегда, у себя
+docker compose up -d
+```
+
+Разово, без правки файла — переменная перед командой; синтаксис зависит от терминала:
+
+```bash
+FRONTEND_PORT=8090 docker compose up -d
+```
+```powershell
+$env:FRONTEND_PORT = 8090
+docker compose up -d
 ```
 
 Порт меняется только для доступа снаружи: внутри compose-сети сервисы общаются по своим
