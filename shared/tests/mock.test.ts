@@ -84,12 +84,16 @@ describe('mock/*.json — валидация', () => {
   });
 
   // 3. Ровно N записей
-  it('ровно 40 самокатов, 7 пользователей, 25 поездок, 25 счетов, 25 писем, у зоны 8 точек', () => {
+  it('ровно 40 самокатов, 7 пользователей, 30 поездок, 25 счетов, 25 писем, у зоны 8 точек', () => {
     const data = generateMock();
     // Шесть «ездящих» пользователей (на них распределены поездки) и второй демо-вход demo2@sharing.kg.
     expect(data.users.length).toBe(7);
     expect(data.scooters.length).toBe(40);
-    expect(data.rides.length).toBe(25);
+    // 25 завершённых поездок (каждая со счётом и письмом) и 5 открытых — по одной на каждый
+    // самокат в статусе «в поездке»: состояние парка и история должны быть согласованы.
+    expect(data.rides.length).toBe(30);
+    expect(data.rides.filter((ride) => ride.status === 'finished')).toHaveLength(25);
+    expect(data.rides.filter((ride) => ride.status !== 'finished')).toHaveLength(5);
     expect(data.invoices.length).toBe(25);
     expect(data.emails.length).toBe(25);
     expect(data.serviceZone.polygon.length).toBe(8);
@@ -150,10 +154,16 @@ describe('mock/*.json — валидация', () => {
   });
 
   // 7. totalAmount каждой поездки = breakdown.total её счёта
-  it('totalAmount совпадает с breakdown.total', () => {
+  it('totalAmount совпадает с breakdown.total у завершённых поездок', () => {
     const data = generateMock();
     const invoiceByRide = new Map(data.invoices.map((inv) => [inv.rideId, inv]));
     for (const ride of data.rides) {
+      if (ride.status !== 'finished') {
+        // Идущая поездка счёта не имеет: сумма появится при завершении.
+        expect(ride.totalAmount).toBeNull();
+        expect(invoiceByRide.has(ride.id)).toBe(false);
+        continue;
+      }
       const inv = invoiceByRide.get(ride.id);
       expect(inv).toBeDefined();
       if (!inv) continue;
@@ -184,7 +194,11 @@ describe('mock/*.json — валидация', () => {
       expect(Number.isInteger(s.batteryPct)).toBe(true);
     }
     for (const r of data.rides) {
-      expect(Number.isInteger(r.totalAmount)).toBe(true);
+      if (r.status === 'finished') {
+        expect(Number.isInteger(r.totalAmount)).toBe(true);
+      } else {
+        expect(r.totalAmount).toBeNull();
+      }
       expect(r.currency).toBe('KGS');
     }
     for (const inv of data.invoices) {
@@ -245,7 +259,12 @@ describe('mock/*.json — валидация', () => {
     for (const r of data.rides) {
       const finishedAt = r.finishedAt;
       if (finishedAt === null) {
-        throw new Error(`поездка ${r.id} без finishedAt: в мок-данных все поездки завершённые`);
+        // Открытая поездка: время окончания не проставлено, но она не может быть «из будущего».
+        expect(r.status).toBe('active');
+        expect(r.endReason).toBeNull();
+        // Время начала берётся из генератора как «сейчас минус несколько минут».
+        expect(fromIso(r.startedAt) <= Date.now()).toBe(true);
+        continue;
       }
       expect(fromIso(finishedAt)).toBeGreaterThan(fromIso(r.startedAt));
       expect(fromIso(r.updatedAt) >= fromIso(r.createdAt)).toBe(true);

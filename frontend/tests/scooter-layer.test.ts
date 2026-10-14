@@ -8,6 +8,7 @@ import {
   countByStatus,
   createMarkerStyle,
   createParkLayer,
+  readScooterId,
   freeScooters,
   scooterFeature,
   SCOOTER_ID_PROPERTY,
@@ -88,6 +89,40 @@ describe('стиль маркеров', () => {
 
   it('незнакомый статус показывается как недоступный, а не как свободный', () => {
     expect(fillOf('что-то новое')).toBe('#888888');
+  });
+
+  it('выделенный самокат отличается от остальных: кольцо и больший радиус', () => {
+    const scooter = makeScooter({ status: 'free' });
+    const feature = scooterFeature(scooter);
+    const read = (style: ReturnType<ReturnType<typeof createMarkerStyle>>): { radius: number; stroke: number } => {
+      if (Array.isArray(style) || style === undefined) {
+        throw new Error('стиль маркера должен быть одним объектом');
+      }
+      const image = style.getImage();
+      if (!(image instanceof Circle)) {
+        throw new Error('маркер рисуется кругом');
+      }
+      return { radius: image.getRadius(), stroke: image.getStroke()?.getWidth() ?? 0 };
+    };
+
+    const plain = read(createMarkerStyle('light')(feature, 1));
+    const selected = read(createMarkerStyle('light', scooter.id)(feature, 1));
+
+    expect(selected.radius).toBeGreaterThan(plain.radius);
+    expect(selected.stroke).toBeGreaterThan(plain.stroke);
+    // Выбор не меняет цвет статуса: состояние самоката читается и у выделенного маркера.
+    expect(selected.radius).toBe(plain.radius + 3);
+  });
+
+  it('читает идентификатор самоката из свойств объекта карты', () => {
+    const scooter = makeScooter();
+    expect(readScooterId(scooterFeature(scooter))).toBe(scooter.id);
+  });
+
+  it('объект без идентификатора не считается выбранным самокатом', () => {
+    const feature = scooterFeature(makeScooter());
+    feature.unset(SCOOTER_ID_PROPERTY);
+    expect(readScooterId(feature)).toBeNull();
   });
 });
 

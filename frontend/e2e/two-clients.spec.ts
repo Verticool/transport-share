@@ -41,14 +41,17 @@ test('два пользователя видят каждый свой каби�
       OTHER_EMAIL,
     );
 
-    // И истории поездок у них разные — это разные аккаунты, а не один общий кэш.
+    // Истории поездок у них разные — это разные аккаунты, а не один общий кэш.
+    // Сверяем не «магические» числа, а содержимое: у второго пользователя в его истории видна
+    // его незакрытая поездка, у первого её быть не может — значит данные принадлежат аккаунту.
     await nav(firstPage, RIDES_LINK);
-    const firstRides = await totalFrom(firstPage);
-    await nav(secondPage, RIDES_LINK);
-    const secondRides = await totalFrom(secondPage);
+    expect(await totalFrom(firstPage)).toBeGreaterThan(0);
+    // У открытой поездки причина окончания не проставлена — в списке она помечена «Идёт».
+    await expect(firstPage.getByTestId('rides-list').getByText('Идёт')).toHaveCount(0);
 
-    expect(firstRides).toBe(8);
-    expect(secondRides).toBe(7);
+    await nav(secondPage, RIDES_LINK);
+    expect(await totalFrom(secondPage)).toBeGreaterThan(0);
+    await expect(secondPage.getByTestId('rides-list').getByText('Идёт').first()).toBeVisible();
   } finally {
     await first.close();
     await second.close();

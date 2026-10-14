@@ -6,7 +6,10 @@ import { defineConfig, devices } from '@playwright/test';
  * Отличия от основного конфига: фронт поднимается с `VITE_API_MODE=http` (данные приходят с
  * сервера, а не из моков), а сервер стартует рядом и подключается к базе из `DATABASE_URL`.
  */
-const DATABASE_URL = process.env['TEST_DATABASE_URL'] ?? 'postgres://sharing:sharing@localhost:5433/sharing';
+// Тестовая база, а не рабочая: проверки оформляют брони и закрывают поездки, и делать это
+// в базе, которой пользуется приложение, нельзя (см. docker/postgres/init-test-db.sql).
+const DATABASE_URL =
+  process.env['TEST_DATABASE_URL'] ?? 'postgres://sharing:sharing@localhost:5433/sharing_test';
 const FRONTEND_PORT = 5174;
 
 /**

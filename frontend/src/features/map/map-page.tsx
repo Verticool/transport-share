@@ -90,7 +90,11 @@ export function MapPage() {
   return (
     <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="relative min-h-[420px] overflow-hidden rounded-xl border">
-        <MapCanvas scooters={scooters} selectedId={selectedId ?? ride.ride?.scooterId ?? null} />
+        <MapCanvas
+          scooters={scooters}
+          selectedId={selectedId ?? ride.ride?.scooterId ?? null}
+          onSelect={setSelectedId}
+        />
       </div>
 
       <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto" aria-label="Панель парка">

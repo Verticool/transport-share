@@ -14,15 +14,27 @@ import { basemapFor, MAP_ZOOM, ZONE } from '../../config/map';
 import { useTheme } from '../../hooks/use-theme';
 import { createParkMap } from '../../lib/map/create-map';
 import { createBasemapLayer, createZoneLayer, zoneExtent, ZONE_LAYER_Z_INDEX } from '../../lib/map/layers';
-import { createMarkerStyle, createParkLayer, PARK_LAYER_Z_INDEX } from '../../lib/map/scooter-layer';
+import {
+  createMarkerStyle,
+  createParkLayer,
+  PARK_LAYER_Z_INDEX,
+  readScooterId,
+} from '../../lib/map/scooter-layer';
 import { cn } from '../../lib/utils';
 import { useThemeStore } from '../../stores/theme';
 
 export interface MapCanvasProps {
   /** Самокаты для отображения: пустой список — карта без маркеров. */
   scooters: Scooter[];
-  /** Выбранный самокат: карта подводит к нему вид. */
+  /** Выбранный самокат: карта подводит к нему вид и выделяет маркер. */
   selectedId?: string | null;
+  /**
+   * Выбор самоката кликом по маркеру.
+   *
+   * Карта — равноправный способ выбрать самокат: панель справа открывает ту же карточку с бронью,
+   * что и строка списка. Без этого бронь была доступна только из списка.
+   */
+  onSelect?: (scooterId: string) => void;
   /** Дополнительные классы контейнера. */
   className?: string;
 }
@@ -41,11 +53,20 @@ const SELECT_ZOOM = 16;
  * Стили слоёв живут на канвасе, который не читает CSS-переменные, поэтому при смене темы
  * пересобираются и подложка, и цвета зоны, и маркеры.
  */
-export function MapCanvas({ scooters, selectedId = null, className }: MapCanvasProps) {
+export function MapCanvas({ scooters, selectedId = null, onSelect, className }: MapCanvasProps) {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const parkLayerRef = useRef<VectorLayer<VectorSource<Feature<Point>>> | null>(null);
+  // Обработчик выбора живёт в ref: карта создаётся один раз, а подписка не должна пересоздаваться
+  // из-за новой ссылки на функцию при каждом рендере (иначе обработчики накапливались бы).
+  const selectRef = useRef<((scooterId: string) => void) | undefined>(onSelect);
+
+  // Подписка на клик читает обработчик из ref, поэтому его нужно обновлять после рендера,
+  // а не во время: во время рендера ref-ы трогать нельзя (правило React).
+  useEffect(() => {
+    selectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -75,8 +96,47 @@ export function MapCanvas({ scooters, selectedId = null, className }: MapCanvasP
     });
     observer.observe(container);
 
+    /** Самокат под точкой: попадание считается с запасом, чтобы маркер в 7 px не приходилось ловить. */
+    const scooterAt = (pixel: number[]): string | null => {
+      let found: string | null = null;
+      map.forEachFeatureAtPixel(
+        pixel,
+        (feature) => {
+          found = readScooterId(feature);
+          return found === null ? undefined : true;
+        },
+        { hitTolerance: 8, layerFilter: (layer) => layer.getZIndex() === PARK_LAYER_Z_INDEX },
+      );
+      return found;
+    };
+
+    // Слушаем вьюпорт карты, а координату точки берём у карты: так выбор самоката не зависит от
+    // того, как тип события карты назван в библиотеке, и работает и мышью, и касанием.
+    const handleClick = (event: MouseEvent): void => {
+      const scooterId = scooterAt(map.getEventPixel(event));
+      if (scooterId !== null) {
+        selectRef.current?.(scooterId);
+      }
+    };
+
+    // Курсор показывает, что по маркеру можно щёлкнуть — иначе карта выглядит как картинка.
+    // Ставим его на вьюпорт карты: это та поверхность, по которой двигается указатель.
+    const handlePointerMove = (event: PointerEvent): void => {
+      const surface = map.getViewport();
+      if (surface === undefined || surface === null) {
+        return;
+      }
+      surface.style.cursor = scooterAt(map.getEventPixel(event)) === null ? '' : 'pointer';
+    };
+
+    const viewport = map.getViewport();
+    viewport?.addEventListener('click', handleClick);
+    viewport?.addEventListener('pointermove', handlePointerMove);
+
     return () => {
       observer.disconnect();
+      viewport?.removeEventListener('click', handleClick);
+      viewport?.removeEventListener('pointermove', handlePointerMove);
       map.setTarget(undefined);
       mapRef.current = null;
       parkLayerRef.current = null;
@@ -102,6 +162,7 @@ export function MapCanvas({ scooters, selectedId = null, className }: MapCanvasP
         layer.setStyle(zoneStyle);
       }
       if (layer instanceof VectorLayer && layer.getZIndex() === PARK_LAYER_Z_INDEX) {
+        // Без выделения: подсветка выбранного ставится эффектом ниже, где известен выбор.
         layer.setStyle(markerStyle);
       }
     });
@@ -116,7 +177,8 @@ export function MapCanvas({ scooters, selectedId = null, className }: MapCanvasP
     // Полный пересбор набора: 40 объектов обновляются мгновенно, а дельты по WebSocket
     // появятся вместе с сервером (S11) — тогда здесь будет точечное обновление.
     parkLayer.setSource(createParkLayer(scooters, useThemeStore.getState().theme).getSource());
-  }, [scooters, theme]);
+    parkLayer.setStyle(createMarkerStyle(theme, selectedId));
+  }, [scooters, theme, selectedId]);
 
   useEffect(() => {
     const map = mapRef.current;

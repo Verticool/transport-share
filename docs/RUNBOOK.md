@@ -53,15 +53,32 @@ VITE_API_MODE=http npm run dev -w frontend   # Vite на :5173, /api и /ws пр
 он остаётся для быстрого показа интерфейса.
 
 Сквозные проверки по реальному стеку (фронт + сервер + база) — отдельный конфиг: он сам поднимает
-сервер и Vite на :5174, а перед прогоном приводит базу к исходному состоянию.
+сервер и Vite на :5174, а перед прогоном приводит к исходному состоянию **тестовую** базу.
 
 ```bash
-TEST_DATABASE_URL=postgres://sharing:sharing@localhost:5433/sharing \
+# у тестов своя база: проверки очищают таблицы и не должны трогать данные приложения
+TEST_DATABASE_URL=postgres://sharing:sharing@localhost:5433/sharing_test \
   npx playwright test --config=playwright.live.config.ts -w frontend
 ```
 
-Сброс состояния тестовой базы вручную: `DATABASE_URL=... npm run db:reset-test -w backend`
-(скрипт очищает таблицы и наполняет их заново; на рабочей базе не запускать).
+Та же проверка против уже собранных контейнеров (проверяем то, что сдаём; база при этом не
+сбрасывается, а сценарии сами приводят аккаунт в спокойное состояние):
+
+```bash
+BASE_URL=http://localhost:8088 npx playwright test --config=playwright.live.config.ts -w frontend
+```
+
+Тестовая база создаётся автоматически при первом запуске тома (`docker/postgres/init-test-db.sql`).
+Если том уже существует, создать её вручную:
+
+```bash
+docker compose exec db psql -U sharing -d postgres -c 'CREATE DATABASE sharing_test OWNER sharing'
+DATABASE_URL=postgres://sharing:sharing@localhost:5433/sharing_test npm run migrate -w backend
+```
+
+Сброс тестовой базы вручную: `DATABASE_URL=...sharing_test npm run db:reset-test -w backend`.
+Руководило простое правило: **на рабочей базе (sharing) проверки не запускать** — они стирают
+сессии и незакрытые поездки живых пользователей.
 
 ## 4. Проверка работоспособности (доказуемость)
 

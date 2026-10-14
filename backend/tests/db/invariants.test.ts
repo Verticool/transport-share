@@ -222,7 +222,8 @@ suite('сид из мок-данных', () => {
     // Шесть «ездящих» пользователей плюс демо-аккаунт для входа (demo2@sharing.kg).
     expect(first.users).toBe(7);
     expect(first.scooters).toBe(40);
-    expect(first.rides).toBe(25);
+    // 25 завершённых поездок и 5 открытых — у каждого самоката со статусом «в поездке».
+    expect(first.rides).toBe(30);
     expect(first.invoices).toBeGreaterThan(0);
     expect(first.emails).toBe(first.invoices);
 

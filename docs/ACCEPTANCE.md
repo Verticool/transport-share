@@ -25,7 +25,8 @@
 
 | # | Требование | Проверка | Инструмент | Evidence |
 |---|---|---|---|---|
-| B1 | Состояние на карте меняется у всех сразу | второй клиент видит бронь за 7 мс в контейнерах и 13 мс на dev-стенде (порог 500 мс) | Playwright, два контекста | `evidence/S12/docker-acceptance.txt` п.5, `evidence/S11/live-integration.txt` |
+| B1 | Состояние на карте меняется у всех сразу | второй клиент видит бронь за 8 мс в контейнерах и 14 мс на отдельной тестовой базе (порог 500 мс) | Playwright, два контекста | `evidence/fixes/map-click-and-test-db.txt`, `evidence/S11/live-integration.txt` |
+| B10 | Самокат выбирается и на карте, не только в списке | клик по маркеру открывает ту же карточку с бронью; курсор над точкой — указатель, выбранный маркер выделен кольцом | Playwright (поиск маркера по курсору) + замер DOM | `evidence/fixes/map-click-and-test-db.txt` п.2 |
 | B2 | Одновременная бронь одного самоката невозможна | два параллельных `POST /api/bookings` → ровно один 201, второй 409; тот же вывод снаружи | vitest на живой базе + скрипт приёмки | `backend/tests/db/api.test.ts`, `evidence/S12/docker-acceptance.txt` п.4 |
 | B3 | Бронь снимается через 15 минут, уведомление за 3 | подмена часов: 12:00 → `booking.expiring`, 15:00 → `expired`, самокат `free` | vitest с инъекцией `Clock` | `evidence/S9/rest-acceptance.txt` |
 | B4 | Поминутная тарификация, пауза отдельно, копейки не теряются | таблица цен `DOMAIN.md §5` закрыта тестами, пауза тарифицируется отдельно | vitest (домен и сервер) | `evidence/S10/billing-acceptance.txt` |
@@ -56,11 +57,12 @@
 npm install
 bash scripts/demo.sh            # поднимает три контейнера и прогоняет сценарии снаружи
 npm run check                   # типы, линтер, тесты по всем воркспейсам
-npm run test:e2e -w frontend    # интерфейс на мок-данных (8 проверок)
-TEST_DATABASE_URL=postgres://sharing:sharing@localhost:5433/sharing \
-  npx playwright test --config=frontend/playwright.live.config.ts        # интерфейс на живом сервере
+npm run test:e2e -w frontend    # интерфейс на мок-данных (9 проверок, включая выбор самоката на карте)
+# проверки против настоящего сервера идут в отдельную базу — рабочая не трогается
+TEST_DATABASE_URL=postgres://sharing:sharing@localhost:5433/sharing_test \
+  npx playwright test --config=frontend/playwright.live.config.ts
 BASE_URL=http://localhost:8088 \
-  npx playwright test --config=frontend/playwright.live.config.ts        # то же против контейнеров
+  npx playwright test --config=frontend/playwright.live.config.ts   # то же против собранных контейнеров
 ```
 
 Что смотреть в выводе: `docker compose ps` — три контейнера `healthy`; `probe-container` — страница,

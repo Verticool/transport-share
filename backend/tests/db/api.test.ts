@@ -788,6 +788,13 @@ suite('симулятор', () => {
 
   it('не двигает свободные самокаты', async () => {
     await resetData();
+    // В мок-данных есть самокаты, которые уже едут (у них открытая поездка). Для этой проверки
+    // поездки закрываем: она про правило «симулятор трогает только тех, кто в поездке».
+    await pool.query(
+      "UPDATE rides SET status = 'finished', finished_at = now(), end_reason = 'user', total_amount = 100 WHERE status <> 'finished'",
+    );
+    await pool.query("UPDATE scooters SET status = 'free' WHERE status = 'in_ride'");
+
     const changes = await bundle.simulator.tick();
     expect(changes).toEqual([]);
   });

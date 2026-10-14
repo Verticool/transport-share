@@ -1,0 +1,27 @@
+=== финальная сводка после правок · 2026-10-14T03:27:00Z ===
+
+--- типы и линтер ---
+shared    tsc 0, eslint чисто
+frontend  tsc 0, eslint чисто
+backend   tsc 0, eslint чисто
+
+--- тесты ---
+ Test Files  7 passed (7)
+      Tests  190 passed (190)
+ Test Files  15 passed (15)
+      Tests  135 passed (135)
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m20 passed[39m[22m[90m (20)[39m
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m47 passed[39m[22m[90m (47)[39m
+
+--- e2e на моках ---
+  9 passed (19.2s)
+
+--- e2e на сервере (отдельная база) ---
+второй клиент увидел бронь за 11 мс
+  3 passed (11.4s)
+
+--- e2e против собранных контейнеров ---
+второй клиент увидел бронь за 9 мс
+  3 passed (5.1s)

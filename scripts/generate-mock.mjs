@@ -194,7 +194,9 @@ export function generateMock() {
   );
 
   // ── rides ────────────────────────────────────────────────────────────────
-  // 25 завершённых поездок с паузами и без.
+  // 25 завершённых поездок с паузами и без, плюс открытые поездки для самокатов со статусом
+  // «в поездке». Без них состояние парка было несогласованным: самокат показывался занятым,
+  // а поездки, объясняющей это, не существовало (замечено на живом прогоне).
   const rides = [];
   const invoices = [];
   const emails = [];
@@ -276,6 +278,34 @@ export function generateMock() {
       dedupeKey: `invoice:${rideId}`,
       createdAt: toIso(rideEndMs - 1_000),
       sentAt: finishedAt,
+    });
+  }
+
+  // ── открытые поездки ─────────────────────────────────────────────────────
+  // Каждому самокату со статусом «в поездке» — своя незакрытая поездка у конкретного пользователя.
+  // Расчёт и счёт тут не создаются: поездка идёт, счёт появится при завершении.
+  const rentingScooters = scooters.filter((scooter) => scooter.status === 'in_ride');
+  for (const [index, scooter] of rentingScooters.entries()) {
+    const startedAt = now - randInt(4, 26, rng) * 60_000;
+    // Владельцы идут по кругу, начиная со второго: у одного человека не может быть двух открытых
+    // поездок (это правило держит и база — индекс `rides_one_open_per_user`), а демонстрационные
+    // входы (demo@ и demo2@) должны оставаться свободными — с них начинаются сценарии приёмки.
+    const owner = riders[(index + 1) % riders.length];
+    const userId = owner.id;
+    rides.push({
+      id: uid(uidCounter++),
+      userId,
+      scooterId: scooter.id,
+      bookingId: uid(uidCounter++),
+      status: 'active',
+      startedAt: toIso(startedAt),
+      finishedAt: null,
+      endReason: null,
+      distanceM: randInt(200, 4200, rng),
+      totalAmount: null,
+      currency: DEFAULT_TARIFF.currency,
+      createdAt: toIso(startedAt - 5_000),
+      updatedAt: toIso(now - index * 1_000),
     });
   }
 

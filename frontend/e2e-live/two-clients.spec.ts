@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
+import { DEMO, SECOND_DEMO, ensureIdle, rowByCode, rowWithStatus, signIn } from './helpers';
 
 /**
  * Два клиента на реальном стеке: фронт обращается к серверу, состояние общее и живое.
@@ -7,31 +9,6 @@ import { expect, test, type Page } from '@playwright/test';
  * самокат не могут забронировать двое. Второй клиент узнаёт об этом по потоку событий, без
  * перезагрузки и без ручного обновления.
  */
-const DEMO = { email: 'demo@sharing.kg', password: 'demo1234' };
-const OTHER = { email: 'alan@example.com', password: 'demo1234' };
-
-async function signIn(page: Page, account: { email: string; password: string }): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Почта').fill(account.email);
-  await page.getByLabel('Пароль').fill(account.password);
-  await page.locator('form').getByRole('button', { name: 'Войти' }).click();
-  await expect(page.getByRole('heading', { name: 'Парк' })).toBeVisible();
-}
-
-/** Строка парка с указанным статусом: по ней видно состояние самоката у этого клиента. */
-function rowWithStatus(page: Page, status: string, index = 0) {
-  return page
-    .getByTestId('park-list')
-    .getByRole('button')
-    .filter({ hasText: status })
-    .nth(index);
-}
-
-/** Строка парка по коду самоката — так два клиента говорят об одном и том же самокате. */
-function rowByCode(page: Page, code: string) {
-  return page.getByTestId('park-list').getByRole('button').filter({ hasText: code }).first();
-}
-
 test('живой поток: состояние доезжает до второго клиента и бронь нельзя перехватить', async ({ browser }) => {
   const first = await browser.newContext();
   const second = await browser.newContext();
@@ -41,13 +18,16 @@ test('живой поток: состояние доезжает до второ
     const secondPage = await second.newPage();
 
     await signIn(firstPage, DEMO);
-    await signIn(secondPage, OTHER);
+    await ensureIdle(firstPage);
+    await signIn(secondPage, SECOND_DEMO);
+    await ensureIdle(secondPage);
 
     // Поток поднялся: панель парка показывает, что данные живые.
     await expect(firstPage.getByTestId('live-indicator')).toBeVisible();
 
     // Оба клиента видят один и тот же самокат свободным.
     const target = rowWithStatus(firstPage, 'Свободен');
+    await expect(target).toBeVisible();
     const code = ((await target.innerText()).split('\n')[0] ?? '').trim();
     expect(code).toMatch(/^[A-Z]{2}-\d+$/);
     await expect(rowByCode(secondPage, code)).toContainText('Свободен');
@@ -62,20 +42,18 @@ test('живой поток: состояние доезжает до второ
     const propagatedMs = Date.now() - startedAt;
     // Требование этапа: второй клиент узнаёт об этом быстрее половины секунды.
     // Значение печатается: приёмка идёт по измерению, а не по слову «работает».
-    process.stdout.write(`
-второй клиент увидел бронь за ${propagatedMs} мс
-`);
+    process.stdout.write(`\nвторой клиент увидел бронь за ${propagatedMs} мс\n`);
     expect(propagatedMs).toBeLessThan(500);
 
     // Второй клиент не может забронировать тот же самокат: получает отказ, а не «тихую» бронь.
-    await (rowByCode(secondPage, code)).click();
+    await rowByCode(secondPage, code).click();
     const secondCard = secondPage.getByTestId('scooter-card');
     await expect(secondCard).toBeVisible();
     // Кнопка недоступна: самокат занят — интерфейс не предлагает действие, которое сервер отклонит.
     await expect(secondCard.getByRole('button', { name: 'Забронировать' })).toBeDisabled();
 
     // Отмена брони первым клиентом: второй тоже видит самокат свободным — поток работает в обе стороны.
-    await firstPage.getByRole('button', { name: "Снять бронь" }).click();
+    await firstPage.getByRole('button', { name: 'Снять бронь' }).click();
     await expect(rowByCode(secondPage, code)).toContainText('Свободен');
   } finally {
     await first.close();
@@ -88,9 +66,11 @@ test('обрыв связи не ломает экран: после восст�
   try {
     const page = await context.newPage();
     await signIn(page, DEMO);
+    await ensureIdle(page);
     await expect(page.getByTestId('live-indicator')).toBeVisible();
 
     const free = rowWithStatus(page, 'Свободен');
+    await expect(free).toBeVisible();
     const code = ((await free.innerText()).split('\n')[0] ?? '').trim();
 
     // Имитируем пропажу сети: экран остаётся работоспособным, список не исчезает.

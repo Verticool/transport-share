@@ -12,14 +12,20 @@ export default function globalSetup(): void {
   const here = dirname(fileURLToPath(import.meta.url));
   const root = resolve(here, '..', '..');
   const databaseUrl =
-    process.env['TEST_DATABASE_URL'] ?? 'postgres://sharing:sharing@localhost:5433/sharing';
+    process.env['TEST_DATABASE_URL'] ?? 'postgres://sharing:sharing@localhost:5433/sharing_test';
 
   // `shell: true` — потому что npm на Windows это файл npm.cmd, а execFileSync без оболочки
   // ищет только исполняемые файлы и падает с ENOENT.
-  execFileSync('npm', ['run', 'db:reset-test', '-w', 'backend'], {
-    cwd: root,
-    stdio: 'inherit',
-    shell: true,
-    env: { ...process.env, DATABASE_URL: databaseUrl, MOCK_DIR: 'mock' },
-  });
+  const run = (script: string): void => {
+    execFileSync('npm', ['run', script, '-w', 'backend'], {
+      cwd: root,
+      stdio: 'inherit',
+      shell: true,
+      env: { ...process.env, DATABASE_URL: databaseUrl, MOCK_DIR: 'mock' },
+    });
+  };
+
+  // Тестовая база живёт своей жизнью: сначала схема, потом данные. Без миграций сервер не поднимется.
+  run('migrate');
+  run('db:reset-test');
 }

@@ -23,6 +23,9 @@ services:
       - '5433:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
+      # Отдельная база для интеграционных проверок: тесты чистят таблицы и не должны трогать
+      # данные приложения (см. RUNBOOK.md §4).
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U sharing -d sharing']
       interval: 3s

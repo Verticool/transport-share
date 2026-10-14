@@ -10,6 +10,7 @@ import Fill from 'ol/style/Fill';
 import Stroke from 'ol/style/Stroke';
 import Style from 'ol/style/Style';
 import type { StyleFunction } from 'ol/style/Style';
+import { z } from 'zod';
 
 import { SCOOTER_STATUS_ORDER } from '../../config/scooter-status';
 import { readStatusColors } from '../theme-colors';
@@ -53,16 +54,31 @@ export function scooterFeature(scooter: Scooter): Feature<Point> {
 }
 
 /**
+ * Идентификатор самоката из свойств объекта карты.
+ *
+ * Свойства объекта — такие же внешние данные, как ответ сервера, поэтому значение проверяется
+ * схемой: клик по объекту не должен превращаться в исключение из-за неожиданного типа.
+ */
+export function readScooterId(feature: FeatureLike): string | null {
+  const parsed = z.string().min(1).safeParse(feature.get(SCOOTER_ID_PROPERTY));
+  return parsed.success ? parsed.data : null;
+}
+
+/**
  * Стиль маркеров: цвет — из токенов темы (тот же источник, что у бейджей в интерфейсе).
  *
  * Стиль зависит от статуса конкретного объекта, поэтому отдаётся функцией: OpenLayers вызовет
  * её при отрисовке, а цвета кэшируются — иначе на 40 самокатах создавались бы сотни объектов
  * стиля на каждый кадр.
  */
-export function createMarkerStyle(theme: 'light' | 'dark'): StyleFunction {
+export function createMarkerStyle(theme: 'light' | 'dark', selectedId?: string | null): StyleFunction {
   const colors = readStatusColors();
   const outline = theme === 'dark' ? 'oklch(0.23 0.018 260)' : 'oklch(1 0 0)';
+  // Выбранный самокат отмечается кольцом цвета текста: точка на карте должна отвечать на выбор
+  // так же заметно, как строка в списке (иначе непонятно, что именно открыто в панели).
+  const selectionColor = theme === 'dark' ? 'oklch(0.97 0.005 260)' : 'oklch(0.21 0.02 260)';
   const cache = new Map<ScooterStatus, Style>();
+  const selectedCache = new Map<ScooterStatus, Style>();
 
   const styleFor = (status: ScooterStatus): Style => {
     const cached = cache.get(status);
@@ -80,10 +96,29 @@ export function createMarkerStyle(theme: 'light' | 'dark'): StyleFunction {
     return style;
   };
 
+  const selectedStyleFor = (status: ScooterStatus): Style => {
+    const cached = selectedCache.get(status);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const style = new Style({
+      image: new Circle({
+        radius: MARKER_RADIUS + 3,
+        fill: new Fill({ color: colors[status] }),
+        stroke: new Stroke({ color: selectionColor, width: 3 }),
+      }),
+    });
+    selectedCache.set(status, style);
+    return style;
+  };
+
   return (feature: FeatureLike) => {
     const parsed = ScooterStatusSchema.safeParse(feature.get('status'));
     // Незнакомый статус нельзя показать как «свободен»: на карте он выглядит недоступным.
-    return styleFor(parsed.success ? parsed.data : 'unavailable');
+    const status = parsed.success ? parsed.data : 'unavailable';
+    return selectedId != null && readScooterId(feature) === selectedId
+      ? selectedStyleFor(status)
+      : styleFor(status);
   };
 }
 

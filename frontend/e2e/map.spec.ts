@@ -43,6 +43,48 @@ test.describe('карта парка', () => {
     expect(summary.total).toBe(40);
     expect(summary.free + summary.reserved + summary.inRide + summary.unavailable).toBe(40);
   });
+
+  test('клик по маркеру на карте открывает карточку самоката', async ({ page }) => {
+    await page.goto('/');
+    // Ждём парк: в режиме сервера он приходит потоком, в режиме моков — запросом.
+    // Признак один: в списке появилась хотя бы одна строка самоката.
+    await expect(page.getByTestId('park-list').getByRole('button').first()).toBeVisible();
+
+    const viewport = page.locator('.ol-viewport');
+    const box = await viewport.boundingBox();
+    if (box === null) {
+      throw new Error('карта не заняла место на странице');
+    }
+
+    // Маркер ищется так же, как его находит пользователь: курсор над точкой становится указателем.
+    // Координаты не зашиты в тест — иначе он ломался бы при любом изменении вида карты.
+    let clicked: { x: number; y: number } | null = null;
+    const stepX = (box.width - 80) / 14;
+    const stepY = (box.height - 80) / 10;
+    for (let row = 0; row < 10 && clicked === null; row += 1) {
+      for (let column = 0; column < 14 && clicked === null; column += 1) {
+        const x = Math.round(box.x + 40 + column * stepX);
+        const y = Math.round(box.y + 40 + row * stepY);
+        await page.mouse.move(x, y);
+        const pointer = await viewport.evaluate((element) => element.style.cursor === 'pointer');
+        if (pointer) {
+          await page.mouse.click(x, y);
+          clicked = { x, y };
+        }
+      }
+    }
+
+    expect(clicked, 'на карте должен найтись хотя бы один маркер под курсором').not.toBeNull();
+
+    const card = page.getByTestId('scooter-card');
+    await expect(card).toBeVisible();
+    await expect(card).toContainText(/SC-\d{3}/);
+    // Карточка — тот же вход в броню, что и строка списка: из неё видно действие.
+    // Без входа действие предлагается ссылкой «Войти, чтобы забронировать», после входа — кнопкой.
+    await expect(
+      card.getByRole('button', { name: 'Забронировать' }).or(card.getByRole('link', { name: /Войти/ })),
+    ).toBeVisible();
+  });
 });
 
 test.describe('вход и защищённые экраны', () => {
