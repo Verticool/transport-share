@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { SECOND_DEMO, clickMarker, ensureIdle, pickFreeScooter, signIn } from './helpers';
+import { SECOND_DEMO, clickMarker, ensureIdle, pickFreeScooter, signIn, clearAccount } from './helpers';
 
 /** Число поездок из подписи «Всего поездок: N» на странице истории. */
 async function countRides(page: Page): Promise<number> {
@@ -17,7 +17,8 @@ async function countRides(page: Page): Promise<number> {
  * входом. Раньше на этом месте была ошибка «пользователь не найден», а самокат оставался занятым.
  */
 test('поездка с карты под вторым демо-входом: бронь, старт, пауза, завершение', async ({ page }) => {
-  await signIn(page, SECOND_DEMO);
+  await clearAccount(page, SECOND_DEMO);
+    await signIn(page, SECOND_DEMO);
   await ensureIdle(page);
 
   // Выбираем самокат на карте: клик по маркеру открывает ту же карточку с бронью.

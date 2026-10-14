@@ -5,8 +5,11 @@ import {
   LOW_BATTERY_THRESHOLD,
   SERVICE_ZONE,
   calcRidePrice,
+  clampToZone,
   formatMinor,
   isInsideZone,
+  moveTowards,
+  zoneCenter,
 } from '@sharing/shared';
 import type { Invoice, Iso, Ride, RidePause, Tariff } from '@sharing/shared';
 import type { Pool, PoolClient } from 'pg';
@@ -17,7 +20,7 @@ import { closeOpenPause, findActiveRideRow, findRideRowById, finishRideRow, inse
 import { insertEmailRow, insertInvoiceRow } from '../repo/invoices';
 import { findBookingRowById, closeBookingRow } from '../repo/bookings';
 import { toInvoice, toRide, toRidePause, type RideRow } from '../repo/rows';
-import { findScooterRow, setScooterBattery, setScooterStatus } from '../repo/scooters';
+import { findScooterRow, setScooterBattery, setScooterPosition, setScooterStatus } from '../repo/scooters';
 
 /** Что сервер отдаёт вместе с поездкой: интерфейс не хранит ни цены, ни тариф. */
 export interface RideSnapshot {
@@ -113,6 +116,41 @@ export class RideService {
   }
 
   /** Требует свою поездку: чужая отдаётся как отсутствующая. */
+  /**
+   * «Дотолкать» самокат в зону.
+   *
+   * За границей зоны мотор заблокирован: самокат стоит, а время поездки продолжает идти. В жизни
+   * человек разворачивает самокат и везёт его обратно в зелёную зону — здесь это действие
+   * сообщает серверу, что самокат довезли: координаты ставятся внутрь зоны по прямой от текущей
+   * точки, ближе всего к которой он и оказался. Движение после этого продолжается симулятором.
+   */
+  async pushToZone(rideId: string, userId: string): Promise<RideSnapshot> {
+    return withTransaction(this.pool, async (client) => {
+      const row = await this.requireOwnRide(client, rideId, userId);
+      if (row.status === 'finished') {
+        throw conflict('Поездка уже завершена');
+      }
+
+      const scooter = await findScooterRow(client, row.scooter_id);
+      if (scooter === null) {
+        throw notFound('Самокат не найден');
+      }
+
+      const position = { lat: scooter.lat, lng: scooter.lng };
+      if (isInsideZone(position, SERVICE_ZONE)) {
+        throw conflict('Самокат уже в зоне обслуживания');
+      }
+
+      // Ближайшая точка на границе плюс небольшой шаг внутрь: ровно на линии «внутри» быть не должно.
+      const onBoundary = clampToZone(position, SERVICE_ZONE);
+      const inside = moveTowards(onBoundary, zoneCenter(SERVICE_ZONE), 25);
+      await setScooterPosition(client, scooter.id, inside);
+
+      const updated = await findRideRowById(client, row.id);
+      return this.snapshot(client, updated ?? row);
+    });
+  }
+
   private async requireOwnRide(client: PoolClient, rideId: string, userId: string): Promise<RideRow> {
     const row = await findRideRowById(client, rideId);
     if (row?.user_id !== userId) {

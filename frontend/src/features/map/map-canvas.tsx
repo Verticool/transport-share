@@ -35,9 +35,22 @@ export interface MapCanvasProps {
    * что и строка списка. Без этого бронь была доступна только из списка.
    */
   onSelect?: (scooterId: string) => void;
+  /** Часы: время последнего действия с картой нужно для задержки автоследования (RULES §F). */
+  now?: () => number;
   /** Дополнительные классы контейнера. */
   className?: string;
 }
+
+/**
+ * Пауза перед тем, как карта сама подведёт вид к выбранному самокату.
+ *
+ * Пока идёт поездка, координаты самоката обновляются каждую секунду. Без паузы карта «дёргала» бы
+ * вид на каждое обновление и не давала посмотреть город: отзумиться было невозможно.
+ */
+const FOLLOW_DELAY_MS = 6000;
+
+/** Как часто карта может сама менять вид при движении самоката (не чаще одного раза в интервал). */
+const FOLLOW_THROTTLE_MS = 4000;
 
 /** Зум, к которому подводится вид при выборе самоката в списке. */
 const SELECT_ZOOM = 16;
@@ -53,11 +66,31 @@ const SELECT_ZOOM = 16;
  * Стили слоёв живут на канвасе, который не читает CSS-переменные, поэтому при смене темы
  * пересобираются и подложка, и цвета зоны, и маркеры.
  */
-export function MapCanvas({ scooters, selectedId = null, onSelect, className }: MapCanvasProps) {
+export function MapCanvas({
+  scooters,
+  selectedId = null,
+  onSelect,
+  now = () => Date.now(),
+  className,
+}: MapCanvasProps) {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const parkLayerRef = useRef<VectorLayer<VectorSource<Feature<Point>>> | null>(null);
+  // Актуальный список самокатов для эффекта подведения вида: держим в ref, чтобы список не был
+  // зависимостью эффекта — иначе карта реагировала бы на каждое обновление парка.
+  const scootersRef = useRef(scooters);
+  useEffect(() => {
+    scootersRef.current = scooters;
+  }, [scooters]);
+  // Время последнего действия пользователя с картой и время последнего автоследования.
+  const lastTouchRef = useRef(0);
+  const lastFollowRef = useRef(0);
+  // Часы тоже через ref: обработчики карты живут в эффекте с пустым списком зависимостей.
+  const nowRef = useRef(now);
+  useEffect(() => {
+    nowRef.current = now;
+  }, [now]);
   // Обработчик выбора живёт в ref: карта создаётся один раз, а подписка не должна пересоздаваться
   // из-за новой ссылки на функцию при каждом рендере (иначе обработчики накапливались бы).
   const selectRef = useRef<((scooterId: string) => void) | undefined>(onSelect);
@@ -129,14 +162,27 @@ export function MapCanvas({ scooters, selectedId = null, onSelect, className }: 
       surface.style.cursor = scooterAt(map.getEventPixel(event)) === null ? '' : 'pointer';
     };
 
+    // Любое действие с картой (перетаскивание, колесо, касание) останавливает автоследование на
+    // паузу: пользователь в этот момент смотрит город, а не гонится за самокатом.
+    const markInteraction = (): void => {
+      lastTouchRef.current = nowRef.current();
+    };
     const viewport = map.getViewport();
     viewport?.addEventListener('click', handleClick);
     viewport?.addEventListener('pointermove', handlePointerMove);
+    viewport?.addEventListener('pointerdown', markInteraction);
+    viewport?.addEventListener('wheel', markInteraction);
+    viewport?.addEventListener('touchstart', markInteraction);
+    viewport?.addEventListener('keydown', markInteraction);
 
     return () => {
       observer.disconnect();
       viewport?.removeEventListener('click', handleClick);
       viewport?.removeEventListener('pointermove', handlePointerMove);
+      viewport?.removeEventListener('pointerdown', markInteraction);
+      viewport?.removeEventListener('wheel', markInteraction);
+      viewport?.removeEventListener('touchstart', markInteraction);
+      viewport?.removeEventListener('keydown', markInteraction);
       map.setTarget(undefined);
       mapRef.current = null;
       parkLayerRef.current = null;
@@ -186,17 +232,35 @@ export function MapCanvas({ scooters, selectedId = null, onSelect, className }: 
       return;
     }
 
-    const selected = scooters.find((scooter) => scooter.id === selectedId);
-    if (selected === undefined) {
+    const follow = (): void => {
+      const selected = scootersRef.current.find((scooter) => scooter.id === selectedId);
+      if (selected === undefined) {
+        return;
+      }
+      lastFollowRef.current = now();
+      map.getView().animate({
+        center: fromLonLat([selected.lng, selected.lat]),
+        zoom: Math.max(map.getView().getZoom() ?? MAP_ZOOM, SELECT_ZOOM),
+        duration: 300,
+      });
+    };
+
+    // Пока пользователь трогал карту позже, чем пауза назад, вид не трогаем: ждём таймер.
+    const idleFor = now() - lastTouchRef.current;
+    if (idleFor < FOLLOW_DELAY_MS) {
+      const timer = window.setTimeout(follow, FOLLOW_DELAY_MS - idleFor);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+
+    // И не чаще, чем раз в интервал: самокат в поездке двигается постоянно, а вид — нет.
+    if (now() - lastFollowRef.current < FOLLOW_THROTTLE_MS) {
       return;
     }
 
-    map.getView().animate({
-      center: fromLonLat([selected.lng, selected.lat]),
-      zoom: Math.max(map.getView().getZoom() ?? MAP_ZOOM, SELECT_ZOOM),
-      duration: 300,
-    });
-  }, [selectedId, scooters]);
+    follow();
+  }, [selectedId, scooters, now]);
 
   const zoomBy = useCallback((step: number) => {
     const view = mapRef.current?.getView();

@@ -23,6 +23,7 @@ export function makeStubClient(overrides: Partial<ApiClient> = {}): ApiClient {
     pauseRide: notUsed('pauseRide'),
     resumeRide: notUsed('resumeRide'),
     finishRide: notUsed('finishRide'),
+    pushRideToZone: notUsed('pushRideToZone'),
     login: notUsed('login'),
     logout: notUsed('logout'),
     getMe: notUsed('getMe'),

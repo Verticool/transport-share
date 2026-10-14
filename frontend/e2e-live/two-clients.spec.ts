@@ -1,6 +1,27 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { DEMO, SECOND_DEMO, ensureIdle, rowByCode, rowWithStatus, signIn } from './helpers';
+import { DEMO, SECOND_DEMO, clearAccount, ensureIdle, rowByCode, rowWithStatus, signIn } from './helpers';
+
+/** Код самоката из первой строки подписи строки парка: «SC-013» из «SC-013 Свободен 21 %». */
+async function codeOf(row: ReturnType<typeof rowByCode>): Promise<string> {
+  const text = await row.innerText();
+  const code = /SC-\d{3}/.exec(text)?.[0];
+  if (code === undefined) {
+    throw new Error(`в строке парка нет кода самоката: ${text}`);
+  }
+  return code;
+}
+
+/** Сколько из двух клиентов получили бронь: ровно один самокат — ровно одна бронь. */
+async function bookingsHeld(pages: Page[]): Promise<number> {
+  let held = 0;
+  for (const page of pages) {
+    if (await page.getByTestId('booking-panel').isVisible().catch(() => false)) {
+      held += 1;
+    }
+  }
+  return held;
+}
 
 /**
  * Два клиента на реальном стеке: фронт обращается к серверу, состояние общее и живое.
@@ -17,8 +38,10 @@ test('живой поток: состояние доезжает до второ
     const firstPage = await first.newPage();
     const secondPage = await second.newPage();
 
+    await clearAccount(firstPage, DEMO);
     await signIn(firstPage, DEMO);
     await ensureIdle(firstPage);
+    await clearAccount(secondPage, SECOND_DEMO);
     await signIn(secondPage, SECOND_DEMO);
     await ensureIdle(secondPage);
 
@@ -28,8 +51,7 @@ test('живой поток: состояние доезжает до второ
     // Оба клиента видят один и тот же самокат свободным.
     const target = rowWithStatus(firstPage, 'Свободен');
     await expect(target).toBeVisible();
-    const code = ((await target.innerText()).split('\n')[0] ?? '').trim();
-    expect(code).toMatch(/^[A-Z]{2}-\d+$/);
+    const code = await codeOf(target);
     await expect(rowByCode(secondPage, code)).toContainText('Свободен');
 
     // Первый клиент бронирует: сервер сообщает об этом всем, и второй видит смену статуса.
@@ -61,17 +83,91 @@ test('живой поток: состояние доезжает до второ
   }
 });
 
+test('два клиента бронируют одновременно: один и тот же самокат достаётся ровно одному', async ({
+  browser,
+}) => {
+  const first = await browser.newContext();
+  const second = await browser.newContext();
+
+  try {
+    const firstPage = await first.newPage();
+    const secondPage = await second.newPage();
+
+    await clearAccount(firstPage, DEMO);
+    await signIn(firstPage, DEMO);
+    await ensureIdle(firstPage);
+    await clearAccount(secondPage, SECOND_DEMO);
+    await signIn(secondPage, SECOND_DEMO);
+    await ensureIdle(secondPage);
+
+    // Оба выбирают один и тот же свободный самокат и жмут «Забронировать» одновременно.
+    const target = rowWithStatus(firstPage, 'Свободен');
+    await expect(target).toBeVisible();
+    const code = await codeOf(target);
+
+    await target.click();
+    await rowByCode(secondPage, code).click();
+    await expect(firstPage.getByTestId('scooter-card')).toBeVisible();
+    await expect(secondPage.getByTestId('scooter-card')).toBeVisible();
+
+    await Promise.all([
+      firstPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
+      secondPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
+    ]);
+
+    // Ровно один получает бронь: второй видит самокат занятым, а не «тихую» вторую бронь.
+    // Проверяем по состоянию самоката и числу броней, а не по конкретному тексту отказа:
+    // интерфейс может показать и подпись «занят», и сообщение сервера — важно, что бронь одна.
+    expect(await bookingsHeld([firstPage, secondPage])).toBe(1);
+    await expect(rowByCode(secondPage, code)).toContainText('Забронирован');
+    const loserCard = secondPage.getByTestId('scooter-card');
+    if (await loserCard.isVisible().catch(() => false)) {
+      await expect(loserCard.getByRole('button', { name: 'Забронировать' })).toBeDisabled();
+    }
+
+    // А разные самокаты бронируются одновременно без конфликта: ограничение про один самокат.
+    // Бронь победителя снимаем через API — иначе второй самокат выбирать было бы негде.
+    await clearAccount(firstPage, DEMO);
+    await clearAccount(secondPage, SECOND_DEMO);
+    await firstPage.reload();
+    await secondPage.reload();
+
+    const firstFree = rowWithStatus(firstPage, 'Свободен', 0);
+    const secondFree = rowWithStatus(secondPage, 'Свободен', 1);
+    await expect(firstFree).toBeVisible();
+    await expect(secondFree).toBeVisible();
+    const firstCode = await codeOf(firstFree);
+    const secondCode = await codeOf(secondFree);
+    expect(firstCode).not.toBe(secondCode);
+
+    await firstFree.click();
+    await secondFree.click();
+    await Promise.all([
+      firstPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
+      secondPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
+    ]);
+
+    // Обе брони прошли: разные самокаты друг другу не мешают.
+    await expect(firstPage.getByTestId('booking-panel')).toBeVisible();
+    await expect(secondPage.getByTestId('booking-panel')).toBeVisible();
+  } finally {
+    await first.close();
+    await second.close();
+  }
+});
+
 test('обрыв связи не ломает экран: после восстановления состояние снова живое', async ({ browser }) => {
   const context = await browser.newContext();
   try {
     const page = await context.newPage();
+    await clearAccount(page, DEMO);
     await signIn(page, DEMO);
     await ensureIdle(page);
     await expect(page.getByTestId('live-indicator')).toBeVisible();
 
     const free = rowWithStatus(page, 'Свободен');
     await expect(free).toBeVisible();
-    const code = ((await free.innerText()).split('\n')[0] ?? '').trim();
+    const code = await codeOf(free);
 
     // Имитируем пропажу сети: экран остаётся работоспособным, список не исчезает.
     await context.setOffline(true);

@@ -7,8 +7,10 @@ import {
   EmailMessageSchema,
   InvoiceSchema,
   RideSchema,
+  SERVICE_ZONE,
   ScooterSchema,
   calcRidePrice,
+  isInsideZone,
 } from '@sharing/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -288,26 +290,68 @@ suite('счета и письма', () => {
     expect(letter?.subject.startsWith('Счёт за поездку')).toBe(true);
   });
 
-  it('поездка, покинувшая зону, закрывается сервисом с причиной service', async () => {
+  it('самокат вне зоны: мотор заблокирован, поездка идёт, время капает; возврат в зону её продолжает', async () => {
     const token = await reset();
     const { rideId, scooterId } = await startRide(token);
 
-    // Самокат «вышел» из зоны (например, его унесло за границу): поездку обязан закрыть сервис.
+    // Самокат выехал за границу зоны. В жизни его мотор в этот момент блокируется: сам он не
+    // поедет, и человек разворачивает его и везёт обратно. Поездка при этом не закрывается —
+    // иначе клиент не платил бы за время, которое провёл, толкая самокат.
     await pool.query('UPDATE scooters SET lat = 43.5, lng = 74.0 WHERE id = $1', [scooterId]);
+    const positionBefore = await pool.query<{ lat: number; lng: number }>(
+      'SELECT lat, lng FROM scooters WHERE id = $1',
+      [scooterId],
+    );
     await bundle.simulator.tick();
 
-    const rideRow = await pool.query<{ status: string; end_reason: string | null }>(
+    const afterTick = await pool.query<{ status: string; end_reason: string | null }>(
       'SELECT status, end_reason FROM rides WHERE id = $1',
       [rideId],
     );
-    expect(rideRow.rows[0]?.status).toBe('finished');
-    expect(rideRow.rows[0]?.end_reason).toBe('service');
+    expect(afterTick.rows[0]?.status).toBe('active');
+    expect(afterTick.rows[0]?.end_reason).toBeNull();
 
-    const invoices = await pool.query<{ count: string }>(
-      'SELECT count(*)::text AS count FROM invoices WHERE ride_id = $1',
-      [rideId],
+    // Симулятор не сдвинул самокат: он стоит на месте, пока его не вывезут.
+    const positionAfter = await pool.query<{ lat: number; lng: number }>(
+      'SELECT lat, lng FROM scooters WHERE id = $1',
+      [scooterId],
     );
-    expect(invoices.rows[0]?.count).toBe('1');
+    expect(positionAfter.rows[0]?.lat).toBe(positionBefore.rows[0]?.lat);
+    expect(positionAfter.rows[0]?.lng).toBe(positionBefore.rows[0]?.lng);
+
+    // Завершить поездку здесь нельзя: сначала самокат должен оказаться в зоне.
+    const finishOutside = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/finish`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(finishOutside.statusCode).toBe(422);
+
+    // Действие «дотолкать» возвращает самокат в зону, после чего поездку можно завершить.
+    const pushed = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/push-to-zone`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(pushed.statusCode).toBe(200);
+
+    const inside = await pool.query<{ lat: number; lng: number; status: string }>(
+      'SELECT lat, lng, status FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    expect(
+      isInsideZone(
+        { lat: inside.rows[0]?.lat ?? 0, lng: inside.rows[0]?.lng ?? 0 },
+        SERVICE_ZONE,
+      ),
+    ).toBe(true);
+
+    const finish = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/finish`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(finish.statusCode).toBe(200);
   });
 
   it('на ста случайных поездках суммы счетов совпадают с разбором, потерь нет', async () => {

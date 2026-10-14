@@ -11,8 +11,11 @@ import {
   SERVICE_ZONE,
   ServiceZoneSchema,
   calcRidePrice,
+  clampToZone,
   formatMinor,
   isInsideZone,
+  moveTowards,
+  zoneCenter,
   toIso,
   type Booking,
   type EmailMessage,
@@ -73,6 +76,8 @@ export interface MockServerState {
   pauses: Map<string, RidePause[]>;
   /** Изменённый заряд самокатов: езда разряжает батарею, файл моков про это не знает. */
   battery: Map<string, number>;
+  /** Изменённое положение самокатов: в мок-режиме его меняет возврат в зону из-за границы. */
+  positions: Map<string, { lat: number; lng: number }>;
   /** Заряд на момент старта поездки: расход считается от него, поэтому повторные чтения не копят погрешность. */
   batteryAtRideStart: Map<string, number>;
   /** Счета, выпущенные в этой сессии (по завершении поездки). */
@@ -120,6 +125,7 @@ export function createMockServerState(
     pauses: new Map<string, RidePause[]>(),
     battery: new Map<string, number>(),
     batteryAtRideStart: new Map<string, number>(),
+    positions: new Map<string, { lat: number; lng: number }>(),
     invoices: [],
     emails: [],
     now: options.now ?? (() => Date.now()),
@@ -251,6 +257,7 @@ export class MockApiClient implements ApiClient {
     }
     return scooters.map((scooter) => {
       const batteryPct = this.state.battery.get(scooter.id) ?? scooter.batteryPct;
+      const position = this.state.positions.get(scooter.id);
       const ride = [...this.state.rides.values()].find(
         (item) => item.scooterId === scooter.id && item.status !== 'finished',
       );
@@ -270,6 +277,8 @@ export class MockApiClient implements ApiClient {
         ...scooter,
         status,
         batteryPct,
+        lat: position?.lat ?? scooter.lat,
+        lng: position?.lng ?? scooter.lng,
         updatedAt: ride?.updatedAt ?? booking?.updatedAt ?? scooter.updatedAt,
       };
     });
@@ -650,6 +659,32 @@ export class MockApiClient implements ApiClient {
     }
 
     this.closeRide(ride, this.state.now(), 'user');
+    return this.rideSnapshot(ride);
+  }
+
+  /** Самокат вне зоны: мотор заблокирован. Действие возвращает его в зону, как если бы довезли. */
+  async pushRideToZone(rideId: string, token: string): Promise<RideSnapshot> {
+    await this.applyDelay();
+    const userId = await this.requireUserId(token);
+    const ride = this.requireRide(rideId, userId);
+    if (ride.status === 'finished') {
+      throw new ApiClientError('conflict', 'Поездка уже завершена');
+    }
+
+    const scooters = await this.loadScooters();
+    const scooter = scooters.find((item) => item.id === ride.scooterId);
+    if (scooter === undefined) {
+      throw new ApiClientError('not_found', 'Самокат не найден');
+    }
+    if (isInsideZone({ lat: scooter.lat, lng: scooter.lng }, SERVICE_ZONE)) {
+      throw new ApiClientError('conflict', 'Самокат уже в зоне обслуживания');
+    }
+
+    // Возврат в зону: точка на границе плюс шаг внутрь — ровно на линии быть не должно.
+    const onBoundary = clampToZone({ lat: scooter.lat, lng: scooter.lng }, SERVICE_ZONE);
+    const inside = moveTowards(onBoundary, zoneCenter(SERVICE_ZONE), 25);
+    this.state.positions.set(scooter.id, inside);
+
     return this.rideSnapshot(ride);
   }
 

@@ -66,6 +66,11 @@ export interface ApiClient {
    * проверка на стороне источника данных, интерфейс лишь показывает причину.
    */
   finishRide(rideId: string, token: string): Promise<RideSnapshot>;
+  /**
+   * Самокат за пределами зоны обслуживания: мотор заблокирован, поездка идёт. Действие сообщает,
+   * что самокат довезли обратно в зелёную зону — после этого движение продолжается.
+   */
+  pushRideToZone(rideId: string, token: string): Promise<RideSnapshot>;
 
   /** Вход по email и паролю. Неверные данные — ошибка с кодом `unauthorized`. */
   login(email: string, password: string): Promise<SessionSnapshot>;

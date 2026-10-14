@@ -1,4 +1,10 @@
 import { expect, type Page } from '@playwright/test';
+import { z } from 'zod';
+
+/** Формы ответов, которые нужны для приведения аккаунта в спокойное состояние. */
+const SessionSchema = z.object({ token: z.string() });
+const ActiveBookingSchema = z.object({ booking: z.object({ id: z.string() }).nullable() });
+const ActiveRideSchema = z.object({ ride: z.object({ id: z.string() }).nullable() });
 
 /**
  * Общие шаги сквозных проверок на живом стеке.
@@ -16,6 +22,41 @@ export async function signIn(page: Page, account: { email: string; password: str
   await page.getByLabel('Пароль').fill(account.password);
   await page.locator('form').getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByRole('heading', { name: 'Парк' })).toBeVisible();
+}
+
+/**
+ * Освобождает аккаунт через API: снимает активную бронь и закрывает незакрытую поездку.
+ *
+ * Нужно для прогона против живой базы: предыдущий сценарий мог оставить бронь или поездку, и
+ * тогда проверка начиналась бы не с того состояния. Через интерфейс это сделать не всегда можно
+ * (поездку вне зоны сначала нужно вернуть в зону), поэтому сначала приводим данные в порядок.
+ */
+export async function clearAccount(page: Page, account: { email: string; password: string }): Promise<void> {
+  const login = await page.request.post('/api/auth/login', {
+    data: { email: account.email, password: account.password },
+  });
+  if (!login.ok()) {
+    return;
+  }
+  const session = SessionSchema.safeParse(await login.json());
+  if (!session.success) {
+    return;
+  }
+  const auth = { authorization: `Bearer ${session.data.token}` };
+
+  const bookingResponse = await page.request.get('/api/bookings/active', { headers: auth });
+  const booking = ActiveBookingSchema.safeParse(await bookingResponse.json());
+  if (booking.success && booking.data.booking !== null) {
+    await page.request.delete(`/api/bookings/${booking.data.booking.id}`, { headers: auth });
+  }
+
+  const rideResponse = await page.request.get('/api/rides/active', { headers: auth });
+  const ride = ActiveRideSchema.safeParse(await rideResponse.json());
+  if (ride.success && ride.data.ride !== null) {
+    // Самокат мог оказаться вне зоны: сначала возвращаем его в зону, иначе завершение отклонится.
+    await page.request.post(`/api/rides/${ride.data.ride.id}/push-to-zone`, { headers: auth });
+    await page.request.post(`/api/rides/${ride.data.ride.id}/finish`, { headers: auth });
+  }
 }
 
 /** Освобождает аккаунт: снимает бронь и закрывает незакрытую поездку, если они есть. */

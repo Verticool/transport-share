@@ -142,6 +142,21 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
     return reply.code(200).send(await rides.pause(parsed.data.id, user.id));
   });
 
+  // Самокат вне зоны обслуживания: мотор заблокирован, поездка идёт, время тарифицируется.
+  // Действие сообщает, что самокат довезли обратно в зелёную зону (см. RideService.pushToZone).
+  app.post('/api/rides/:id/push-to-zone', async (request, reply) => {
+    const user = await auth.userByAccessToken(requireBearerToken(request));
+    const parsed = RideIdParamsSchema.safeParse(request.params);
+    if (!parsed.success) {
+      throw notFound('Поездка не найдена');
+    }
+
+    const snapshot = await rides.pushToZone(parsed.data.id, user.id);
+    // Положение самоката изменилось — об этом должны узнать все, кто смотрит карту.
+    await announceScooter(snapshot.ride.scooterId);
+    return reply.code(200).send(snapshot);
+  });
+
   app.post('/api/rides/:id/resume', async (request, reply) => {
     const user = await auth.userByAccessToken(requireBearerToken(request));
     const parsed = RideIdParamsSchema.safeParse(request.params);

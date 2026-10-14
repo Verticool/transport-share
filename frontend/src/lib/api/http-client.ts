@@ -287,7 +287,7 @@ export class HttpApiClient implements ApiClient {
 
   private async rideAction(
     rideId: string,
-    action: 'pause' | 'resume' | 'finish',
+    action: 'pause' | 'resume' | 'finish' | 'push-to-zone',
     token: string,
   ): Promise<{ ride: Ride; pauses: RidePause[]; tariff: Tariff; serverTime: Iso }> {
     const parsed = RideResponseSchema.parse(
@@ -311,6 +311,10 @@ export class HttpApiClient implements ApiClient {
 
   async finishRide(rideId: string, token: string) {
     return this.rideAction(rideId, 'finish', token);
+  }
+
+  async pushRideToZone(rideId: string, token: string) {
+    return this.rideAction(rideId, 'push-to-zone', token);
   }
 
   async login(email: string, password: string): Promise<{ user: PublicUser; token: string; refreshToken: string }> {

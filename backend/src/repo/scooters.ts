@@ -44,3 +44,14 @@ export async function setScooterBattery(
 export async function listScooters(db: Queryable) {
   return (await listScooterRows(db)).map(toScooter);
 }
+
+/**
+ * Ставит самокат в точку: положение и «последний раз видели» обновляются вместе.
+ * Нужно, когда самокат вернули в зону обслуживания вручную (см. RideService.pushToZone).
+ */
+export async function setScooterPosition(db: Queryable, id: string, position: { lat: number; lng: number }): Promise<void> {
+  await db.query(
+    'UPDATE scooters SET lat = $2, lng = $3, last_seen_at = now(), updated_at = now() WHERE id = $1',
+    [id, position.lat, position.lng],
+  );
+}

@@ -13,8 +13,10 @@ const mockDir = resolveMockDir(env.MOCK_DIR);
 const pool = createPool(env);
 
 try {
-  const report = await seed(pool, mockDir, (message) => {
-    process.stdout.write(`${message}\n`);
+  const report = await seed(pool, mockDir, {
+    log: (message) => {
+      process.stdout.write(`${message}\n`);
+    },
   });
   process.stdout.write(`сид завершён: ${JSON.stringify(report)}\n`);
 } catch (error) {

@@ -11,7 +11,7 @@ import { join } from 'node:path';
 
 import { SERVICE_ZONE, FLEET, DEFAULT_TARIFF } from '../shared/src/constants.ts';
 import { toIso } from '../shared/src/time.ts';
-import { randomPointInZone } from '../shared/src/zone.ts';
+import { isInsideZone, moveByBearing, randomPointInZone } from '../shared/src/zone.ts';
 import { calcRidePrice } from '../shared/src/money.ts';
 
 // ─── Mulberry32 — детерминированный генератор псевдослучайных чисел ──────────
@@ -30,6 +30,8 @@ const SEED = 42;
 // Диапазон идентификаторов для пользователей «только для входа»: не пересекается с рабочим
 // счётчиком, поэтому добавление такого аккаунта не сдвигает существующие данные.
 const extraUidBase = 900;
+// Код самоката, который в демонстрационных данных оказался за границей зоны (кейс «вывезли»).
+const OUTSIDE_ZONE_SCOOTER_CODE = 'SC-030';
 
 // ─── Утилиты ──────────────────────────────────────────────────────────────────
 
@@ -162,7 +164,18 @@ export function generateMock() {
       const idx = FLEET.models.indexOf(model) * 10 + i + 1;
       const code = `SC-${String(idx).padStart(3, '0')}`;
       const status = STATUS_DIST[idx - 1];
-      const point = randomPointInZone(SERVICE_ZONE, rng);
+      let point = randomPointInZone(SERVICE_ZONE, rng);
+
+      // Один самокат «выехал» за границу зоны и стоит там с идущей поездкой: это тот случай,
+      // который часто случается в жизни — мотор блокируется, человек везёт самокат обратно
+      // в зелёную зону, а минуты продолжают идти (см. RideService.pushToZone).
+      if (code === OUTSIDE_ZONE_SCOOTER_CODE) {
+        while (isInsideZone(point, SERVICE_ZONE)) {
+          point = { lat: point.lat - 0.004, lng: point.lng };
+        }
+        // Чуть отступаем от границы, чтобы самокат был заметно снаружи, а не на линии.
+        point = moveByBearing(point, 150, 180);
+      }
       const createdAt = toIso(thirtyDaysAgo + idx * 100_000);
       const updatedAt = toIso(thirtyDaysAgo + idx * 100_000 + 60_000);
       const lastSeenAt = toIso(now - (40 - idx) * 60_000);

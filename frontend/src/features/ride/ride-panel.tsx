@@ -25,6 +25,8 @@ export interface RidePanelProps {
   onPause: () => void;
   onResume: () => void;
   onFinish: () => void;
+  /** Возврат самоката в зону: за границей мотор заблокирован, доехать можно только «на руках». */
+  onPushToZone: () => void;
 }
 
 /**
@@ -48,6 +50,7 @@ export function RidePanel({
   onPause,
   onResume,
   onFinish,
+  onPushToZone,
 }: RidePanelProps) {
   const paused = status === 'paused';
 
@@ -125,9 +128,19 @@ export function RidePanel({
         </div>
 
         {!canFinishHere && (
-          <p className="text-xs text-muted-foreground">
-            Вы за границей зоны обслуживания — вернитесь в зону, чтобы завершить поездку.
-          </p>
+          <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3" data-testid="outside-zone">
+            <p className="text-xs text-destructive">
+              Самокат за границей зоны: мотор заблокирован, сам он не поедет. Поездка не закрыта —
+              время и минуты продолжают тарифицироваться, пока самокат не окажется в зелёной зоне.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Разверните самокат и довезите его до зоны (в демонстрации это делает кнопка ниже —
+              GPS здесь эмулируется), после чего поездку можно завершить.
+            </p>
+            <Button type="button" variant="outline" size="sm" onClick={onPushToZone} disabled={busy}>
+              Дотолкать самокат в зону
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

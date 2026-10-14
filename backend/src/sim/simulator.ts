@@ -15,7 +15,7 @@ import type { BookingService } from '../services/booking-service';
 import type { RideService } from '../services/ride-service';
 import { listOpenRideRows } from '../repo/rides';
 import { toRide } from '../repo/rows';
-import { findScooterRow, listScooterRows, setScooterBattery } from '../repo/scooters';
+import { listScooterRows, setScooterBattery } from '../repo/scooters';
 import type { WsHub } from '../ws/hub';
 
 export interface ParkSimulatorDeps {
@@ -104,6 +104,14 @@ export class ParkSimulator {
       return null;
     }
 
+    // Самокат вне зоны обслуживания: мотор заблокирован, сам он никуда не поедет.
+    // Так это выглядит в жизни, когда человек выехал за границу зоны — технику приходится
+    // довозить обратно; поездка при этом не закрывается, и время продолжает тарифицироваться.
+    if (!isInsideZone(position, SERVICE_ZONE)) {
+      this.targets.set(id, null);
+      return null;
+    }
+
     const known = this.targets.get(id);
     if (known !== null && known !== undefined) {
       return known;
@@ -118,34 +126,7 @@ export class ParkSimulator {
    * Один шаг симулятора: движение, расход заряда, рассылка изменений и автофиниш разряженных.
    * Возвращает изменения — их можно проверить в тесте, не поднимая WebSocket.
    */
-  /**
-   * Закрывает поездки, чей самокат оказался вне зоны обслуживания.
-   *
-   * Проверка идёт до шага движения: симулятор удерживает технику в зоне, и после шага «вне зоны»
-   * уже не наблюдается — правило сработало бы никогда.
-   */
-  private async closeRidesOutsideZone(): Promise<void> {
-    for (const row of await listOpenRideRows(this.pool)) {
-      const ride = toRide(row);
-      const scooter = await findScooterRow(this.pool, ride.scooterId);
-      if (scooter === null || isInsideZone({ lat: scooter.lat, lng: scooter.lng }, SERVICE_ZONE)) {
-        continue;
-      }
-      const finished = await this.rides.finishAutomatically(ride.id, 'service').catch(() => null);
-      if (finished !== null) {
-        this.hub.broadcastRideFinished(
-          finished.ride.userId,
-          finished.ride,
-          finished.invoice,
-          finished.serverTime,
-        );
-      }
-    }
-  }
-
   async tick(): Promise<ScooterDelta[]> {
-    await this.closeRidesOutsideZone();
-
     const rows = await listScooterRows(this.pool);
     const openRides = (await listOpenRideRows(this.pool)).map(toRide);
     const ridingScooterIds = new Set(openRides.map((ride) => ride.scooterId));

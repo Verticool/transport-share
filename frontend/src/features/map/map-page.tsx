@@ -1,5 +1,6 @@
 import { isInsideZone } from '@sharing/shared';
-import { useEffect, useRef, useState } from 'react';
+import type { ScooterStatus } from '@sharing/shared';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { BookingPanel } from '../booking/booking-panel';
 import { useBooking } from '../booking/use-booking';
@@ -10,6 +11,7 @@ import { MapCanvas } from './map-canvas';
 import { ParkPanel } from './park-panel';
 import { ScooterCard } from './scooter-card';
 import { usePark } from './use-park';
+import { SCOOTER_STATUS_ORDER } from '../../config/scooter-status';
 import { useSessionStore } from '../../stores/session';
 
 /**
@@ -34,6 +36,19 @@ export function MapPage() {
   const ride = useRide();
   const token = useSessionStore((state) => state.token);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Фильтр состояний общий для карты и списка: снятая галочка убирает маркеры с карты.
+  const [statusFilter, setStatusFilter] = useState<ScooterStatus[]>(() => [...SCOOTER_STATUS_ORDER]);
+  const toggleStatus = useCallback((status: ScooterStatus): void => {
+    setStatusFilter((current) =>
+      current.includes(status)
+        ? current.filter((item) => item !== status)
+        : [...current, status],
+    );
+  }, []);
+  const visibleScooters = useMemo(
+    () => scooters.filter((scooter) => statusFilter.includes(scooter.status)),
+    [scooters, statusFilter],
+  );
 
   /**
    * Начать поездку из брони.
@@ -91,7 +106,7 @@ export function MapPage() {
     <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="relative min-h-[420px] overflow-hidden rounded-xl border">
         <MapCanvas
-          scooters={scooters}
+          scooters={visibleScooters}
           selectedId={selectedId ?? ride.ride?.scooterId ?? null}
           onSelect={setSelectedId}
         />
@@ -120,6 +135,9 @@ export function MapPage() {
             onFinish={() => {
               void handleFinishRide();
             }}
+            onPushToZone={() => {
+              void ride.pushToZone();
+            }}
           />
         )}
 
@@ -138,7 +156,7 @@ export function MapPage() {
           />
         )}
 
-        {!activeRide && booking === null && selected !== null && (
+        {selected !== null && booking === null && !activeRide && (
           <ScooterCard
             scooter={selected}
             busy={bookingBusy}
@@ -151,8 +169,27 @@ export function MapPage() {
           />
         )}
 
+        {/* Выбран другой самокат, пока идёт поездка или держится бронь: вторую взять нельзя.
+            Поясняем словами и называем самокат, к которому нужно вернуться, — но панель не
+            разрастается, иначе список самокатов уезжает за пределы экрана. */}
+        {selected !== null &&
+          (activeRide || booking !== null) &&
+          (rideScooter !== null || bookedScooter !== null) && (
+            <p
+              className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground"
+              data-testid="scooter-card-blocked"
+            >
+              {activeRide && rideScooter !== null
+                ? `Другой самокат взять нельзя, пока идёт поездка на ${rideScooter.code}: две поездки одновременно не поддерживаются.`
+                : `Другой самокат взять нельзя, пока держится бронь на ${bookedScooter?.code ?? ''}: начните поездку или снимите бронь.`}
+            </p>
+          )}
+
         <ParkPanel
-          scooters={scooters}
+          scooters={visibleScooters}
+          allScooters={scooters}
+          statusFilter={statusFilter}
+          onToggleStatus={toggleStatus}
           loading={loading}
           error={error}
           selectedId={selectedId}

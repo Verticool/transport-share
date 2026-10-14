@@ -39,6 +39,8 @@ export interface RideState {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   finish: () => Promise<void>;
+  /** Возврат самоката в зону обслуживания, если он оказался за границей. */
+  pushToZone: () => Promise<void>;
 }
 
 export interface UseRideOptions {
@@ -216,6 +218,18 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
     return runAction(() => clientInstance.finishRide(ride.id, token), 'Не удалось завершить поездку');
   }, [runAction, clientInstance, ride, token]);
 
+  // Самокат за границей зоны: мотор заблокирован. Действие — эмуляция того, что самокат довезли
+  // обратно в зелёную зону (в жизни его везут руками, здесь нет реального GPS).
+  const pushToZone = useCallback(() => {
+    if (ride === null || token === null) {
+      return Promise.resolve();
+    }
+    return runAction(
+      () => clientInstance.pushRideToZone(ride.id, token),
+      'Не удалось вернуть самокат в зону',
+    );
+  }, [runAction, clientInstance, ride, token]);
+
   return {
     ride,
     pauses,
@@ -231,5 +245,6 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
     pause,
     resume,
     finish,
+    pushToZone,
   };
 }

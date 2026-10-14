@@ -100,11 +100,19 @@ describe('mock/*.json — валидация', () => {
   });
 
   // 4. Все самокаты внутри зоны, code уникальны и от SC-001 до SC-040
-  it('все самокаты внутри зоны, коды SC-001…SC-040', () => {
+  it('самокаты внутри зоны, кроме одного «вывезенного»; коды SC-001…SC-040', () => {
     const data = generateMock();
-    for (const s of data.scooters) {
-      expect(isInsideZone({ lat: s.lat, lng: s.lng }, SERVICE_ZONE)).toBe(true);
-    }
+    // В данных есть кейс «самокат вывезли за границу»: он должен быть вне зоны и с открытой
+    // поездкой — иначе состояние парка и история расходятся (мотор заблокирован, поездка идёт).
+    const outside = data.scooters.filter((s) => !isInsideZone({ lat: s.lat, lng: s.lng }, SERVICE_ZONE));
+    expect(outside).toHaveLength(1);
+    const outsideCode = outside[0]?.code;
+    expect(data.rides.some((ride) => ride.status !== 'finished' && ride.scooterId === outside[0]?.id)).toBe(true);
+    expect(outsideCode).toBe('SC-030');
+
+    const inside = data.scooters.filter((s) => isInsideZone({ lat: s.lat, lng: s.lng }, SERVICE_ZONE));
+    expect(inside).toHaveLength(39);
+
     const codes = data.scooters.map((s) => s.code);
     for (let i = 1; i <= 40; i++) {
       expect(codes).toContain(`SC-${String(i).padStart(3, '0')}`);
@@ -114,7 +122,7 @@ describe('mock/*.json — валидация', () => {
 
   // 4.1. Проверка именно ФАЙЛА, а не генератора в памяти: фронт на стадиях S3–S7 читает
   // mock/scooters.json, и он обязан быть согласован с зоной так же, как результат генерации.
-  it('файл mock/scooters.json: все самокаты внутри зоны', () => {
+  it('файл mock/scooters.json: 39 самокатов в зоне и один вывезенный за границу', () => {
     const raw = readFileSync(join(import.meta.dirname, '../../mock/scooters.json'), 'utf8');
     const parsed = z.array(ScooterSchema).safeParse(JSON.parse(raw));
     expect(parsed.success).toBe(true);
@@ -125,7 +133,8 @@ describe('mock/*.json — валидация', () => {
     const outside = parsed.data
       .filter((s) => !isInsideZone({ lat: s.lat, lng: s.lng }, SERVICE_ZONE))
       .map((s) => s.code);
-    expect(outside).toEqual([]);
+    // Тот самый бытовой случай: самокат вывезли из зелёной зоны, поездка не закрыта.
+    expect(outside).toEqual(['SC-030']);
   });
 
   // 5. ≥10 самокатов с batteryPct < 20, все они unavailable; ни один free не имеет < 20

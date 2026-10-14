@@ -18,6 +18,11 @@ export interface ScooterCardProps {
   error: string | null;
   /** Пользователь не вошёл: бронь принадлежит аккаунту, поэтому вместо кнопки — переход на вход. */
   needsAuth: boolean;
+  /**
+   * Почему бронь сейчас недоступна, если дело не в самом самокате: у пользователя уже идёт поездка
+   * или есть бронь. Без этого человек видит серую кнопку и не понимает, что делать.
+   */
+  blockedBy?: { kind: 'ride' | 'booking'; scooterCode: string } | null;
   onBook: (scooterId: string) => void;
   onClose: () => void;
 }
@@ -28,9 +33,17 @@ export interface ScooterCardProps {
  * Кнопка «Забронировать» активна только для свободного самоката; для остальных показывается
  * причина, по которой бронь невозможна, — пользователю не нужно догадываться, почему кнопка серая.
  */
-export function ScooterCard({ scooter, busy, error, needsAuth, onBook, onClose }: ScooterCardProps) {
+export function ScooterCard({
+  scooter,
+  busy,
+  error,
+  needsAuth,
+  blockedBy = null,
+  onBook,
+  onClose,
+}: ScooterCardProps) {
   const info = SCOOTER_STATUS_INFO[scooter.status];
-  const bookable = scooter.status === 'free';
+  const bookable = scooter.status === 'free' && blockedBy === null;
 
   return (
     <Card data-testid="scooter-card">
@@ -76,7 +89,15 @@ export function ScooterCard({ scooter, busy, error, needsAuth, onBook, onClose }
           </Button>
         )}
 
-        {!bookable && info.hint !== null && (
+        {blockedBy !== null && (
+          <p className="text-xs text-muted-foreground" data-testid="scooter-card-blocked">
+            {blockedBy.kind === 'ride'
+              ? `У вас идёт поездка на ${blockedBy.scooterCode}: завершите её, чтобы взять другой самокат — две поездки одновременно не поддерживаются.`
+              : `У вас есть бронь на ${blockedBy.scooterCode}: начните поездку или снимите бронь — вторая бронь одновременно не поддерживается.`}
+          </p>
+        )}
+
+        {blockedBy === null && !bookable && info.hint !== null && (
           <p className="text-xs text-muted-foreground">{info.hint}</p>
         )}
       </CardContent>

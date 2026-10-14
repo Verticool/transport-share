@@ -44,7 +44,16 @@ async function readJson(dir: string, name: string): Promise<unknown> {
  * Операция идемпотентна (`ON CONFLICT DO NOTHING` на каждом шаге): повторный запуск ничего не
  * дублирует и не портит. Так сид можно вызывать при каждом старте контейнера.
  */
-export async function seed(pool: Pool, mockDir: string, log: (message: string) => void = () => undefined): Promise<SeedReport> {
+export interface SeedOptions {
+  log?: (message: string) => void;
+  /** Часы: время наполнения нужно, чтобы открытые поездки начинались «только что» (RULES §F). */
+  now?: () => number;
+}
+
+export async function seed(pool: Pool, mockDir: string, options: SeedOptions = {}): Promise<SeedReport> {
+  const log = options.log ?? (() => undefined);
+  const now = options.now ?? (() => Date.now());
+  const nowMs = now();
   const users = z.array(PublicUserSchema).parse(await readJson(mockDir, 'users.json'));
   const scooters = z.array(ScooterSchema).parse(await readJson(mockDir, 'scooters.json'));
   const rides = z.array(RideSchema).parse(await readJson(mockDir, 'rides.json'));
@@ -88,7 +97,19 @@ export async function seed(pool: Pool, mockDir: string, log: (message: string) =
       report.scooters += result.rowCount ?? 0;
     }
 
+    // Открытые поездки из мок-данных начинаются заново относительно момента наполнения базы:
+    // иначе они «идут» с даты генерации файлов и показывают счётчик вроде «920 минут, 5545 сом»,
+    // хотя самокат только что уехал. Длительность берётся детерминированно, по порядку записи.
+    let runningIndex = 0;
     for (const ride of rides) {
+      const isRunning = ride.status !== 'finished';
+      const startedAt = isRunning
+        ? new Date(nowMs - (3 + runningIndex * 2) * 60_000).toISOString()
+        : ride.startedAt;
+      if (isRunning) {
+        runningIndex += 1;
+      }
+
       const result = await client.query(
         `INSERT INTO rides
            (id, user_id, scooter_id, booking_id, status, started_at, finished_at, end_reason,
@@ -100,14 +121,14 @@ export async function seed(pool: Pool, mockDir: string, log: (message: string) =
           ride.userId,
           ride.scooterId,
           ride.status,
-          ride.startedAt,
+          startedAt,
           ride.finishedAt,
           ride.endReason,
           ride.distanceM,
           ride.totalAmount,
           ride.currency,
-          ride.createdAt,
-          ride.updatedAt,
+          isRunning ? startedAt : ride.createdAt,
+          isRunning ? startedAt : ride.updatedAt,
         ],
       );
       report.rides += result.rowCount ?? 0;

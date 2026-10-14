@@ -1,17 +1,27 @@
-import type { Scooter } from '@sharing/shared';
-import { useMemo, useState } from 'react';
+import type { Scooter, ScooterStatus } from '@sharing/shared';
+import { useMemo } from 'react';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { MAP_CENTER_LATLNG } from '../../config/map';
-import { SCOOTER_STATUS_INFO, SCOOTER_STATUS_ORDER, SCOOTER_STATUS_DOT_CLASS } from '../../config/scooter-status';
-import { formatDistance, formatPercent } from '../../lib/format';
-import { countByStatus, freeScooters, scooterDistanceM } from '../../lib/map/scooter-layer';
 import { StatusBadge } from '../../components/ui/status-badge';
+import { MAP_CENTER_LATLNG } from '../../config/map';
+import {
+  SCOOTER_STATUS_DOT_CLASS,
+  SCOOTER_STATUS_INFO,
+  SCOOTER_STATUS_ORDER,
+} from '../../config/scooter-status';
+import { formatDistance, formatPercent } from '../../lib/format';
+import { countByStatus, scooterDistanceM } from '../../lib/map/scooter-layer';
 import { cn } from '../../lib/utils';
 
 export interface ParkPanelProps {
+  /** Самокаты, прошедшие фильтр: ровно то же показывается на карте. */
   scooters: Scooter[];
+  /** Весь парк — для сводки и счётчиков: фильтр не должен прятать общую картину. */
+  allScooters: Scooter[];
+  /** Включённые состояния: фильтр общий для карты и списка. */
+  statusFilter: ScooterStatus[];
+  onToggleStatus: (status: ScooterStatus) => void;
   loading: boolean;
   error: string | null;
   selectedId: string | null;
@@ -22,13 +32,17 @@ export interface ParkPanelProps {
 }
 
 /**
- * Панель парка: сводка по статусам, фильтр и список самокатов по удалённости от центра.
+ * Панель парка: сводка по состояниям, фильтр и список самокатов по удалённости от центра.
  *
- * Сортировка по расстоянию от центра — это то, что нужно пользователю («что ближе»), а не порядок
- * из файла данных: сервер коды не сортирует осмысленно для человека.
+ * Сводка работает и как фильтр: нажатие на строку состояния убирает или возвращает эти самокаты —
+ * и на карте, и в списке. Сортировка по расстоянию от центра — это то, что нужно человеку
+ * («что ближе»), а не порядок из файла данных.
  */
 export function ParkPanel({
   scooters,
+  allScooters,
+  statusFilter,
+  onToggleStatus,
   loading,
   error,
   selectedId,
@@ -36,16 +50,17 @@ export function ParkPanel({
   onSelect,
   onReload,
 }: ParkPanelProps) {
-  const [onlyFree, setOnlyFree] = useState(false);
+  const counts = useMemo(() => countByStatus(allScooters), [allScooters]);
+  const allEnabled = statusFilter.length === SCOOTER_STATUS_ORDER.length;
 
-  const counts = useMemo(() => countByStatus(scooters), [scooters]);
-  const visible = useMemo(() => {
-    const list = onlyFree ? freeScooters(scooters) : scooters;
-    return [...list].sort(
-      (left, right) =>
-        scooterDistanceM(left, MAP_CENTER_LATLNG) - scooterDistanceM(right, MAP_CENTER_LATLNG),
-    );
-  }, [scooters, onlyFree]);
+  const visible = useMemo(
+    () =>
+      [...scooters].sort(
+        (left, right) =>
+          scooterDistanceM(left, MAP_CENTER_LATLNG) - scooterDistanceM(right, MAP_CENTER_LATLNG),
+      ),
+    [scooters],
+  );
 
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
@@ -65,33 +80,59 @@ export function ParkPanel({
         <CardDescription>
           {loading
             ? 'Загружаем самокаты…'
-            : `${counts.free} свободны из ${scooters.length} в зоне обслуживания`}
+            : `${counts.free} свободны из ${allScooters.length} в зоне обслуживания`}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
-        <ul className="grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Состояние парка">
-          {SCOOTER_STATUS_ORDER.map((status) => (
-            <li key={status} className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span
-                aria-hidden
-                className={cn('size-2 rounded-full', SCOOTER_STATUS_DOT_CLASS[status])}
-              />
-              <span className="truncate">{SCOOTER_STATUS_INFO[status].label}</span>
-              <span className="tabular ml-auto text-foreground">{counts[status]}</span>
-            </li>
-          ))}
+        <ul className="grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Фильтр по состоянию">
+          {SCOOTER_STATUS_ORDER.map((status) => {
+            const enabled = statusFilter.includes(status);
+            return (
+              <li key={status}>
+                <button
+                  type="button"
+                  aria-pressed={enabled}
+                  aria-label={`${SCOOTER_STATUS_INFO[status].label}: ${counts[status]}`}
+                  onClick={() => onToggleStatus(status)}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-accent',
+                    enabled ? 'text-foreground' : 'text-muted-foreground line-through',
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'size-2 rounded-full',
+                      SCOOTER_STATUS_DOT_CLASS[status],
+                      !enabled && 'opacity-40',
+                    )}
+                  />
+                  <span className="truncate">{SCOOTER_STATUS_INFO[status].label}</span>
+                  <span className="tabular ml-auto">{counts[status]}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
 
-        <Button
-          type="button"
-          variant={onlyFree ? 'default' : 'outline'}
-          size="sm"
-          aria-pressed={onlyFree}
-          onClick={() => setOnlyFree((value) => !value)}
-        >
-          Только свободные
-        </Button>
+        {!allEnabled && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Возвращаем весь парк: снимать фильтр по одному состоянию — лишняя работа.
+              for (const status of SCOOTER_STATUS_ORDER) {
+                if (!statusFilter.includes(status)) {
+                  onToggleStatus(status);
+                }
+              }
+            }}
+          >
+            Показать все состояния
+          </Button>
+        )}
 
         {error !== null && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
@@ -134,7 +175,11 @@ export function ParkPanel({
         )}
 
         {error === null && visible.length === 0 && !loading && (
-          <p className="text-xs text-muted-foreground">Подходящих самокатов нет</p>
+          <p className="text-xs text-muted-foreground" data-testid="park-empty">
+            {allScooters.length === 0
+              ? 'Самокатов нет'
+              : 'Под выбранные состояния ничего не попало — включите другое состояние в фильтре'}
+          </p>
         )}
       </CardContent>
     </Card>

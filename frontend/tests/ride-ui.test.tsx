@@ -24,6 +24,7 @@ function renderPanel(overrides: Partial<Parameters<typeof RidePanel>[0]> = {}) {
     onPause: vi.fn(),
     onResume: vi.fn(),
     onFinish: vi.fn(),
+    onPushToZone: vi.fn(),
     ...overrides,
   };
   render(<RidePanel {...props} />);
@@ -70,13 +71,18 @@ describe('RidePanel', () => {
     expect(props.onFinish).toHaveBeenCalledTimes(1);
   });
 
-  it('вне зоны обслуживания завершение недоступно, и причина видна', () => {
-    renderPanel({ canFinishHere: false });
+  it('вне зоны: завершение недоступно, объяснено почему и предложено вернуть самокат', async () => {
+    const user = userEvent.setup();
+    const props = renderPanel({ canFinishHere: false });
 
     expect(screen.getByRole('button', { name: /Завершить/ })).toBeDisabled();
-    expect(
-      screen.getByText('Вы за границей зоны обслуживания — вернитесь в зону, чтобы завершить поездку.'),
-    ).toBeInTheDocument();
+    const block = screen.getByTestId('outside-zone');
+    // Мотор заблокирован, но поездка не закрыта — человек должен понимать, что время идёт.
+    expect(block).toHaveTextContent('мотор заблокирован');
+    expect(block).toHaveTextContent('продолжают тарифицироваться');
+
+    await user.click(screen.getByRole('button', { name: 'Дотолкать самокат в зону' }));
+    expect(props.onPushToZone).toHaveBeenCalledTimes(1);
   });
 
   it('при потере связи говорит, что счёт продолжается', () => {

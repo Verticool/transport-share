@@ -21,8 +21,10 @@ try {
   await pool.query(
     'TRUNCATE ride_points, ride_events, ride_pauses, invoices, emails, rides, bookings, sessions, scooters, users CASCADE',
   );
-  const report = await seed(pool, mockDir, (message) => {
-    process.stdout.write(`${message}\n`);
+  const report = await seed(pool, mockDir, {
+    log: (message) => {
+      process.stdout.write(`${message}\n`);
+    },
   });
   process.stdout.write(`база сброшена и наполнена: ${JSON.stringify(report)}\n`);
 } catch (error) {
