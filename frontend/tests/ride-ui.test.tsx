@@ -26,6 +26,8 @@ function renderPanel(overrides: Partial<Parameters<typeof RidePanel>[0]> = {}) {
     onFinish: vi.fn(),
     onPushToZone: vi.fn(),
     onSteer: vi.fn(),
+    onDrain: vi.fn(),
+    batteryPct: 62,
     ...overrides,
   };
   render(<RidePanel {...props} />);
@@ -78,7 +80,49 @@ describe('RidePanel', () => {
 
     await user.click(screen.getByRole('button', { name: 'Сдвинуть самокат на север' }));
 
-    expect(props.onSteer).toHaveBeenCalledWith('north');
+    // Шаг по умолчанию — обычный, 20 м: крупный включается переключателем в центре крестовины.
+    expect(props.onSteer).toHaveBeenCalledWith('north', 20);
+  });
+
+  it('показывает заряд самоката прямо в панели поездки', () => {
+    renderPanel({ batteryPct: 62 });
+
+    // Во время поездки заряд — такая же важная цифра, как время и сумма: его видно в шапке панели.
+    expect(screen.getByTestId('ride-battery')).toHaveTextContent('заряд 62 %');
+
+    // Заряд неизвестен — честная подпись вместо нуля, который читался бы как «разряжен в ноль».
+    renderPanel({ batteryPct: null });
+    expect(screen.getAllByTestId('ride-battery')[1]).toHaveTextContent('заряд —');
+  });
+
+  it('переключатель шага меняет руль: 20 м и крупный шаг 200 м', async () => {
+    const user = userEvent.setup();
+    const props = renderPanel();
+
+    const step = screen.getByTestId('steer-step');
+    expect(step).toHaveTextContent('20 м');
+
+    await user.click(step);
+    expect(step).toHaveTextContent('200 м');
+
+    // Крупный шаг нужен, чтобы быстро выехать за границу зоны: он уходит в запрос.
+    await user.click(screen.getByRole('button', { name: 'Сдвинуть самокат на юг' }));
+    expect(props.onSteer).toHaveBeenCalledWith('south', 200);
+  });
+
+  it('разряд батареи доступен кнопкой и выключен на паузе', async () => {
+    const user = userEvent.setup();
+    const props = renderPanel({ batteryPct: 30 });
+
+    await user.click(screen.getByTestId('ride-drain'));
+
+    expect(props.onDrain).toHaveBeenCalledWith(10);
+  });
+
+  it('разряд недоступен на паузе: мотор выключен, и заряда не убывает', () => {
+    renderPanel({ status: 'paused', batteryPct: 30 });
+
+    expect(screen.getByTestId('ride-drain')).toBeDisabled();
   });
 
   it('на паузе руль недоступен и объясняет почему: пауза — это выключенный мотор', () => {

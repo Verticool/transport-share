@@ -36,6 +36,17 @@ export interface RideFinishResult extends RideSnapshot {
   invoice: Invoice;
 }
 
+/**
+ * Результат ручного разряда батареи.
+ *
+ * `finished` заполняется только тогда, когда заряд дошёл до нуля и поездка закрылась сама — как это
+ * делает симулятор. Ненулевой заряд — просто обновлённый снимок поездки.
+ */
+export interface DrainResult {
+  ride: RideSnapshot;
+  finished: RideFinishResult | null;
+}
+
 export interface RideServiceDeps {
   pool: Pool;
   now: () => number;
@@ -160,7 +171,12 @@ export class RideService {
    * возврат в неё — симулятор возит самокат сам и всегда внутри зоны. На паузе мотор выключен,
    * поэтому движение отклоняется: пауза и означает «самокат не едет».
    */
-  async steer(rideId: string, userId: string, direction: SteerDirection): Promise<RideSnapshot> {
+  async steer(
+    rideId: string,
+    userId: string,
+    direction: SteerDirection,
+    stepM?: number,
+  ): Promise<RideSnapshot> {
     return withTransaction(this.pool, async (client) => {
       const row = await this.requireOwnRide(client, rideId, userId);
       if (row.status === 'finished') {
@@ -175,11 +191,45 @@ export class RideService {
         throw notFound('Самокат не найден');
       }
 
-      const moved = steeredPosition({ lat: scooter.lat, lng: scooter.lng }, direction);
+      const moved = steeredPosition({ lat: scooter.lat, lng: scooter.lng }, direction, stepM);
       await setScooterPosition(client, scooter.id, moved);
 
       const updated = await findRideRowById(client, row.id);
       return this.snapshot(client, updated ?? row);
+    });
+  }
+
+  /**
+   * Разряд батареи для проверки: сколько процентов «снять» с самоката.
+   *
+   * В жизни заряд падает примерно на 1 % в минуту езды — проверять автофиниш по разряду пришлось бы
+   * час. Здесь заряд уменьшают вручную; когда он доходит до нуля, поездка закрывается так же, как
+   * это делает симулятор: с причиной `battery_depleted` и письмом со счётом.
+   */
+  async drainBattery(rideId: string, userId: string, pct: number): Promise<DrainResult> {
+    return withTransaction(this.pool, async (client) => {
+      const row = await this.requireOwnRide(client, rideId, userId);
+      if (row.status === 'finished') {
+        throw conflict('Поездка уже завершена');
+      }
+
+      const scooter = await findScooterRow(client, row.scooter_id);
+      if (scooter === null) {
+        throw notFound('Самокат не найден');
+      }
+
+      const left = Math.max(0, scooter.battery_pct - pct);
+      await setScooterBattery(client, scooter.id, left);
+
+      if (left > 0) {
+        const updated = await findRideRowById(client, row.id);
+        return { ride: await this.snapshot(client, updated ?? row), finished: null };
+      }
+
+      // Результат завершения сам является снимком поездки (RideFinishResult extends RideSnapshot),
+      // плюс несёт счёт — поэтому отдаём его и как снимок, и как признак закрытия.
+      const finished = await this.finalize(client, row, 'battery_depleted');
+      return { ride: finished, finished };
     });
   }
 

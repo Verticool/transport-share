@@ -13,6 +13,8 @@ export interface BookingPanelProps {
   busy: boolean;
   onStart: () => void;
   onCancel: () => void;
+  /** Ускорить срок брони: нужно, чтобы увидеть оповещение о снятии, не ожидая пятнадцати минут. */
+  onShorten: (minutes: number) => void;
 }
 
 /**
@@ -28,6 +30,7 @@ export function BookingPanel({
   busy,
   onStart,
   onCancel,
+  onShorten,
 }: BookingPanelProps) {
   const totalSeconds = Math.ceil(remainingMs / 1000);
 
@@ -68,6 +71,18 @@ export function BookingPanel({
         <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
           Снять бронь
         </Button>
+
+        {/* Ручка для проверки оповещений: срок брони — пятнадцать минут, предупреждение приходит
+            за три минуты до снятия. Ждать этого в демонстрации незачем. */}
+        <div className="flex items-center gap-2" data-testid="booking-shorten">
+          <span className="text-xs text-muted-foreground">Проверка оповещений:</span>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onShorten(1)} disabled={busy}>
+            −1 мин
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onShorten(12)} disabled={busy}>
+            −12 мин
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

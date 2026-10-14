@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { StatusBadge } from '../../components/ui/status-badge';
-import { MAP_CENTER_LATLNG } from '../../config/map';
+import { SERVICE_ZONE, zoneCenter } from '@sharing/shared';
 import {
   SCOOTER_STATUS_DOT_CLASS,
   SCOOTER_STATUS_INFO,
@@ -63,13 +63,17 @@ export function ParkPanel({
     row?.scrollIntoView({ block: 'nearest' });
   }, [selectedId]);
 
+  // Точка отсчёта одна и та же для всего парка — центр зоны обслуживания. Это НЕ «сколько проехал
+  // самокат»: при движении к центру число уменьшается, от центра — растёт, и это ожидаемо для
+  // удалённости. Раньше колонка была без подписи, и её читали как пройденный путь.
+  const distances = useMemo(() => {
+    const center = zoneCenter(SERVICE_ZONE);
+    return new Map(scooters.map((scooter) => [scooter.id, scooterDistanceM(scooter, center)]));
+  }, [scooters]);
+
   const visible = useMemo(
-    () =>
-      [...scooters].sort(
-        (left, right) =>
-          scooterDistanceM(left, MAP_CENTER_LATLNG) - scooterDistanceM(right, MAP_CENTER_LATLNG),
-      ),
-    [scooters],
+    () => [...scooters].sort((left, right) => (distances.get(left.id) ?? 0) - (distances.get(right.id) ?? 0)),
+    [scooters, distances],
   );
 
   return (
@@ -161,11 +165,22 @@ export function ParkPanel({
           </div>
         )}
 
+        {error === null && visible.length > 0 && (
+          <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground" data-testid="park-list-header">
+            <span className="font-medium">Самокат</span>
+            <span className="ml-auto w-14 text-center">Заряд</span>
+            {/* Подпись важна: колонка показывает удалённость от центра зоны, а не путь поездки. */}
+            <span className="w-14 text-right">До центра зоны</span>
+          </div>
+        )}
+
         {error === null && (
           <ul
             ref={listRef}
-            className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1"
-            aria-label="Самокаты поблизости"
+            // min-h-32: список не сжимается в ноль, когда панель (бронь или поездка) разрастается.
+            // Иначе строки уезжают за пределы вида, и клик по ним невозможен (проверено e2e).
+            className="-mx-1 min-h-32 flex-1 overflow-y-auto px-1"
+            aria-label="Самокаты: удалённость от центра зоны обслуживания"
             data-testid="park-list"
           >
             {visible.map((scooter) => (
@@ -186,7 +201,7 @@ export function ParkPanel({
                     {formatPercent(scooter.batteryPct)}
                   </span>
                   <span className="tabular w-14 text-right text-xs text-muted-foreground">
-                    {formatDistance(scooterDistanceM(scooter, MAP_CENTER_LATLNG))}
+                    {formatDistance(distances.get(scooter.id) ?? 0)}
                   </span>
                 </button>
               </li>

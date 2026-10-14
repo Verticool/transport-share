@@ -690,7 +690,12 @@ export class MockApiClient implements ApiClient {
     return this.rideSnapshot(ride);
   }
 
-  async steerRide(rideId: string, direction: SteerDirection, token: string): Promise<RideSnapshot> {
+  async steerRide(
+    rideId: string,
+    direction: SteerDirection,
+    stepM: number,
+    token: string,
+  ): Promise<RideSnapshot> {
     await this.applyDelay();
     const userId = await this.requireUserId(token);
     const ride = this.requireRide(rideId, userId);
@@ -709,9 +714,56 @@ export class MockApiClient implements ApiClient {
     }
 
     const position = this.state.positions.get(scooter.id) ?? { lat: scooter.lat, lng: scooter.lng };
-    this.state.positions.set(scooter.id, steeredPosition(position, direction));
+    this.state.positions.set(scooter.id, steeredPosition(position, direction, stepM));
 
     return this.rideSnapshot(ride);
+  }
+
+  async drainRide(rideId: string, pct: number, token: string): Promise<RideSnapshot> {
+    await this.applyDelay();
+    const userId = await this.requireUserId(token);
+    const ride = this.requireRide(rideId, userId);
+    if (ride.status === 'finished') {
+      throw new ApiClientError('conflict', 'Поездка уже завершена');
+    }
+
+    const scooters = await this.loadScooters();
+    const scooter = scooters.find((item) => item.id === ride.scooterId);
+    if (scooter === undefined) {
+      throw new ApiClientError('not_found', 'Самокат не найден');
+    }
+
+    const left = Math.max(0, (this.state.battery.get(scooter.id) ?? scooter.batteryPct) - pct);
+    this.state.battery.set(scooter.id, left);
+    if (left === 0) {
+      // Заряд кончился: поездка закрывается сама, как это делает серверный симулятор.
+      this.closeRide(ride, this.state.now(), 'battery_depleted');
+    }
+
+    return this.rideSnapshot(ride);
+  }
+
+  async shortenBooking(bookingId: string, minutes: number, token: string): Promise<Booking> {
+    await this.applyDelay();
+    const userId = await this.requireUserId(token);
+    const found = [...this.state.bookings.values()].find(
+      (item) => item.id === bookingId && item.userId === userId,
+    );
+    if (found === undefined) {
+      throw new ApiClientError('not_found', 'Бронь не найдена');
+    }
+    if (found.status !== 'active') {
+      throw new ApiClientError('conflict', 'Бронь уже снята');
+    }
+
+    const shortened: Booking = {
+      ...found,
+      expiresAt: toIso(Date.parse(found.expiresAt) - minutes * 60_000),
+      notifiedAt: null,
+      updatedAt: toIso(this.state.now()),
+    };
+    this.state.bookings.set(shortened.scooterId, shortened);
+    return shortened;
   }
 
   // ── Аккаунт и кабинет ──────────────────────────────────────────────────────────────────────

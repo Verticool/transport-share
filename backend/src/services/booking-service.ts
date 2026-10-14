@@ -15,6 +15,7 @@ import {
   findExpiringBookings,
   insertBookingRow,
   markBookingNotified,
+  shortenBookingRow,
 } from '../repo/bookings';
 import { toBooking, type BookingRow } from '../repo/rows';
 import { findScooterRow, setScooterStatus } from '../repo/scooters';
@@ -95,6 +96,28 @@ export class BookingService {
 
       await setScooterStatus(client, scooterId, 'reserved');
       return toBooking(row);
+    });
+  }
+
+  /**
+   * Укорачивает бронь: сдвигает срок снятия на несколько минут назад.
+   *
+   * Нужно ровно для проверки оповещений: в жизни бронь живёт 15 минут и предупреждение приходит
+   * за 3 минуты до снятия — ждать этого в демонстрации бессмысленно.
+   */
+  async shorten(bookingId: string, userId: string, minutes: number): Promise<Booking> {
+    return withTransaction(this.pool, async (client) => {
+      const row = await findBookingRowById(client, bookingId);
+      if (row?.user_id !== userId) {
+        throw notFound('Бронь не найдена');
+      }
+      if (row.status !== 'active') {
+        throw conflict('Бронь уже снята');
+      }
+
+      await shortenBookingRow(client, bookingId, minutes);
+      const updated = await findBookingRowById(client, bookingId);
+      return toBooking(updated ?? row);
     });
   }
 

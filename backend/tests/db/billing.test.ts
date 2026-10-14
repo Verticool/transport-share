@@ -10,6 +10,7 @@ import {
   SERVICE_ZONE,
   ScooterSchema,
   calcRidePrice,
+  haversineM,
   isInsideZone,
 } from '@sharing/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -288,6 +289,124 @@ suite('счета и письма', () => {
     expect(letter).toBeDefined();
     expect(letter?.body).toContain('закончился заряд');
     expect(letter?.subject.startsWith('Счёт за поездку')).toBe(true);
+  });
+
+  it('крупный шаг руля 200 м: одним нажатием можно выехать за границу зоны', async () => {
+    const token = await reset();
+    const { rideId, scooterId } = await startRide(token);
+
+    const before = await pool.query<{ lat: number; lng: number }>(
+      'SELECT lat, lng FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    const steer = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/steer`,
+      payload: { direction: 'north', stepM: 200 },
+      headers: auth(token),
+    });
+    expect(steer.statusCode).toBe(200);
+
+    const after = await pool.query<{ lat: number; lng: number }>(
+      'SELECT lat, lng FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    const movedM = haversineM(
+      { lat: before.rows[0]?.lat ?? 0, lng: before.rows[0]?.lng ?? 0 },
+      { lat: after.rows[0]?.lat ?? 0, lng: after.rows[0]?.lng ?? 0 },
+    );
+    // Шаг 200 м: допуск на округление координат — это и есть «быстрый» режим руля.
+    expect(movedM).toBeGreaterThan(180);
+    expect(movedM).toBeLessThan(220);
+
+    // Несогласованный шаг отклоняется: руль принимает только 20 и 200 м.
+    const wrongStep = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/steer`,
+      payload: { direction: 'north', stepM: 5000 },
+      headers: auth(token),
+    });
+    expect(wrongStep.statusCode).toBe(400);
+  });
+
+  it('разряд батареи: при нуле поездка закрывается сама и приходит счёт', async () => {
+    const token = await reset();
+    const { rideId, scooterId } = await startRide(token);
+
+    const drain = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/rides/${rideId}/drain`,
+      payload: { pct: 100 },
+      headers: auth(token),
+    });
+    expect(drain.statusCode).toBe(200);
+
+    const scooter = await pool.query<{ battery_pct: number; status: string }>(
+      'SELECT battery_pct, status FROM scooters WHERE id = $1',
+      [scooterId],
+    );
+    expect(scooter.rows[0]?.battery_pct).toBe(0);
+
+    // Автофиниш по разряду — то же поведение, что у серверного симулятора: причина, счёт, письмо.
+    const ride = await pool.query<{ status: string; end_reason: string | null }>(
+      'SELECT status, end_reason FROM rides WHERE id = $1',
+      [rideId],
+    );
+    expect(ride.rows[0]?.status).toBe('finished');
+    expect(ride.rows[0]?.end_reason).toBe('battery_depleted');
+
+    const invoices = await pool.query<{ count: string }>(
+      'SELECT count(*)::text AS count FROM invoices WHERE ride_id = $1',
+      [rideId],
+    );
+    expect(invoices.rows[0]?.count).toBe('1');
+  });
+
+  it('сокращение брони: срок сдвигается, и бронь снимается по тику сервиса', async () => {
+    const token = await reset();
+
+    const scooterId = await freeScooterId();
+    const created = await bundle.app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      payload: { scooterId },
+      headers: auth(token),
+    });
+    const booking = BookingResponseSchema.parse(created.json()).booking;
+
+    const shortened = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/bookings/${booking.id}/shorten`,
+      payload: { minutes: 1 },
+      headers: auth(token),
+    });
+    expect(shortened.statusCode).toBe(200);
+    const afterShorten = BookingResponseSchema.parse(shortened.json()).booking;
+    // Срок сдвинулся ровно на минуту назад — по нему панель и показывает «осталось».
+    expect(Date.parse(booking.expiresAt) - Date.parse(afterShorten.expiresAt)).toBe(60_000);
+
+    // Сокращаем на весь срок: бронь снимается, самокат снова свободен — это и есть «снятие брони»,
+    // о котором приходит оповещение.
+    const expired = await bundle.app.inject({
+      method: 'POST',
+      url: `/api/bookings/${booking.id}/shorten`,
+      payload: { minutes: 15 },
+      headers: auth(token),
+    });
+    expect(expired.statusCode).toBe(200);
+
+    const active = await bundle.app.inject({
+      method: 'GET',
+      url: '/api/bookings/active',
+      headers: auth(token),
+    });
+    // Бронь снята: активной брони нет.
+    expect(z.object({ booking: z.null() }).parse(active.json()).booking).toBeNull();
+
+    const scooter = await pool.query<{ status: string }>('SELECT status FROM scooters WHERE id = $1', [
+      scooterId,
+    ]);
+    expect(scooter.rows[0]?.status).toBe('free');
   });
 
   it('пауза выключает мотор: самокат не двигается и не тратит заряд', async () => {

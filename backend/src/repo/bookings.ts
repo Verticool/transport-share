@@ -84,6 +84,27 @@ export async function findExpiringBookings(
   return result.rows.map((row: unknown) => BookingRowSchema.parse(row));
 }
 
+/**
+ * Сокращает бронь на указанное число минут.
+ *
+ * `notified_at` сбрасывается: предупреждение «бронь скоро снимется» должно прийти заново, иначе
+ * после сокращения оповещение уже не сработает (оно отправляется один раз на бронь).
+ */
+export async function shortenBookingRow(db: Queryable, id: string, minutes: number): Promise<void> {
+  // Ниже времени брони срок не опускаем: на этом стоит ограничение схемы
+  // (`expires_at > reserved_at`). Минимальный срок — «уже истёк» (на миллисекунду позже брони),
+  // и следующий тик сервиса снимает бронь обычным порядком, как по таймеру.
+  await db.query(
+    `UPDATE bookings
+        SET expires_at = GREATEST(reserved_at + interval '1 millisecond',
+                                  expires_at - ($2 || ' minutes')::interval),
+            notified_at = NULL,
+            updated_at = now()
+      WHERE id = $1`,
+    [id, String(minutes)],
+  );
+}
+
 export async function markBookingNotified(db: Queryable, id: string): Promise<void> {
   await db.query('UPDATE bookings SET notified_at = now() WHERE id = $1', [id]);
 }

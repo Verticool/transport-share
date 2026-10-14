@@ -15,6 +15,7 @@ describe('BookingPanel', () => {
       busy: false,
       onStart: vi.fn(),
       onCancel: vi.fn(),
+    onShorten: vi.fn(),
       ...overrides,
     };
     render(<BookingPanel {...props} />);

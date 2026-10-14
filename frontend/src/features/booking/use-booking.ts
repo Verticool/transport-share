@@ -1,4 +1,4 @@
-import { BOOKING_NOTIFY_MINUTES, type Booking } from '@sharing/shared';
+import { BOOKING_NOTIFY_MINUTES, toIso, type Booking } from '@sharing/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiClientError, createApiClient, type ApiClient } from '../../lib/api';
@@ -18,6 +18,13 @@ export interface BookingState {
   error: string | null;
   book: (scooterId: string) => Promise<void>;
   cancel: () => Promise<void>;
+  /**
+   * Укорачивает бронь на минуты.
+   *
+   * Только для проверки: срок брони — пятнадцать минут, и оповещение «бронь скоро снимется»
+   * приходит за три минуты до конца. Ждать этого на стенде бессмысленно.
+   */
+  shorten: (minutes: number) => Promise<void>;
   /** Перезапросить бронь: нужен после того, как поездка началась и бронь израсходована. */
   refresh: () => void;
 }
@@ -165,6 +172,28 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
     }
   }, [applySnapshot, booking, token]);
 
+  const shorten = useCallback(
+    async (minutes: number): Promise<void> => {
+      const current = booking;
+      if (current === null || token === null) {
+        return;
+      }
+      setLoading(true);
+      try {
+        const updated = await clientRef.current.shortenBooking(current.id, minutes, token);
+        // Срок изменился — счётчик в панели должен считать от нового срока, а не от прежнего.
+        // Время сервера здесь неизвестно — берём часы клиента: панель считает остаток от срока брони.
+        applySnapshot({ booking: updated, serverTime: toIso(now() + skewMs) });
+        setError(null);
+      } catch (caught) {
+        setError(caught instanceof ApiClientError ? caught.message : 'Не удалось сократить бронь');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applySnapshot, booking, now, skewMs, token],
+  );
+
   // Перезапрос — счётчиком попыток, а не новой функцией: снаружи (карта, панель) на эту функцию
   // подписаны эффекты, и нестабильная ссылка превращала бы любое событие в бесконечный цикл
   // запросов (проверено вживую: 930 запросов за 5 секунд).
@@ -180,6 +209,7 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
     error,
     book,
     cancel,
+    shorten,
     refresh: requestRefresh,
   };
 }

@@ -78,7 +78,25 @@ export interface ApiClient {
    * Руль для стенда: без него нельзя проверить ни выезд за зону обслуживания, ни возврат в неё —
    * симулятор возит самокат сам и только внутри зоны. На паузе мотор выключен, движение отклоняется.
    */
-  steerRide(rideId: string, direction: SteerDirection, token: string): Promise<RideSnapshot>;
+  steerRide(
+    rideId: string,
+    direction: SteerDirection,
+    stepM: number,
+    token: string,
+  ): Promise<RideSnapshot>;
+  /**
+   * Разряд батареи для проверки автофиниша.
+   *
+   * В жизни заряд падает примерно на процент в минуту: без этого действия проверка «самокат
+   * разрядился, поездка закрылась сама» занимала бы час.
+   */
+  drainRide(rideId: string, pct: number, token: string): Promise<RideSnapshot>;
+  /**
+   * Укорачивает бронь: срок автоматического снятия сдвигается назад.
+   *
+   * Нужно, чтобы увидеть оповещения о снятии брони сразу, а не через пятнадцать минут ожидания.
+   */
+  shortenBooking(bookingId: string, minutes: number, token: string): Promise<Booking>;
 
   /** Вход по email и паролю. Неверные данные — ошибка с кодом `unauthorized`. */
   login(email: string, password: string): Promise<SessionSnapshot>;

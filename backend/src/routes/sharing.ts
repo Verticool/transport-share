@@ -17,8 +17,17 @@ import type { RideService } from '../services/ride-service';
 const BookingIdParamsSchema = z.object({ id: z.string().min(1) });
 const RideIdParamsSchema = z.object({ id: z.string().min(1) });
 
-/** Тело управления самокатом: сторона света, в которую его сдвигают. */
-const SteerRequestSchema = z.object({ direction: SteerDirectionSchema });
+/** Тело управления самокатом: сторона света и шаг (20 м обычный, 200 м — «крупный» для проверки). */
+const SteerRequestSchema = z.object({
+  direction: SteerDirectionSchema,
+  stepM: z.union([z.literal(20), z.literal(200)]).optional(),
+});
+
+/** Тело ручного разряда батареи: сколько процентов снять. */
+const DrainRequestSchema = z.object({ pct: z.number().int().min(1).max(100) });
+
+/** Тело сокращения брони: на сколько минут сдвинуть срок снятия. */
+const ShortenBookingRequestSchema = z.object({ minutes: z.number().int().min(1).max(60) });
 const StartRideBodySchema = z.object({ bookingId: z.string().min(1) });
 
 export interface SharingRoutesOptions {
@@ -86,6 +95,36 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
     hub.broadcastBookingCreated(user.id, booking);
     await announceScooter(booking.scooterId);
     return reply.code(201).send({ booking, serverTime: serverTime() });
+  });
+
+  // Сокращение брони: сдвигает срок автоматического снятия, чтобы оповещения можно было проверить
+  // сразу, а не через пятнадцать минут. Оповещения рассылаются тут же — тик броней вызывается вручную.
+  app.post('/api/bookings/:id/shorten', async (request, reply) => {
+    const user = await auth.userByAccessToken(requireBearerToken(request));
+    const parsed = z.object({ id: z.string().min(1) }).safeParse(request.params);
+    if (!parsed.success) {
+      throw notFound('Бронь не найдена');
+    }
+
+    const body = ShortenBookingRequestSchema.safeParse(request.body);
+    if (!body.success) {
+      throw badRequest('Не понял, на сколько минут сократить бронь');
+    }
+
+    const booking = await bookings.shorten(parsed.data.id, user.id, body.data['minutes']);
+    const result = await bookings.tick();
+    for (const expired of result.expired) {
+      hub.broadcastBookingExpired(expired.id);
+    }
+    for (const expiring of result.expiring) {
+      hub.broadcastBookingExpiring(expiring.userId, {
+        bookingId: expiring.id,
+        expiresAt: expiring.expiresAt,
+        minutesLeft: expiring.minutesLeft,
+      });
+    }
+
+    return reply.code(200).send({ booking, serverTime: serverTime() });
   });
 
   app.delete('/api/bookings/:id', async (request, reply) => {
@@ -174,10 +213,43 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
       throw badRequest('Не понял, куда двигать самокат');
     }
 
-    const snapshot = await rides.steer(parsed.data.id, user.id, body.data['direction']);
+    const snapshot = await rides.steer(
+      parsed.data.id,
+      user.id,
+      body.data['direction'],
+      body.data['stepM'],
+    );
     // Самокат сдвинулся — об этом должны узнать все, кто смотрит карту.
     await announceScooter(snapshot.ride.scooterId);
     return reply.code(200).send(snapshot);
+  });
+
+  // Ручной разряд батареи: заряд падает примерно на 1 % в минуту, поэтому автофиниш по разряду
+  // иначе пришлось бы ждать час. Когда заряд доходит до нуля — поездка закрывается и приходит счёт.
+  app.post('/api/rides/:id/drain', async (request, reply) => {
+    const user = await auth.userByAccessToken(requireBearerToken(request));
+    const parsed = RideIdParamsSchema.safeParse(request.params);
+    if (!parsed.success) {
+      throw notFound('Поездка не найдена');
+    }
+
+    const body = DrainRequestSchema.safeParse(request.body);
+    if (!body.success) {
+      throw badRequest('Не понял, сколько заряда снять');
+    }
+
+    const result = await rides.drainBattery(parsed.data.id, user.id, body.data.pct);
+    await announceScooter(result.ride.ride.scooterId);
+    if (result.finished !== null) {
+      // Поездка закрылась по разряду: клиент получает и событие, и счёт.
+      hub.broadcastRideFinished(
+        result.finished.ride.userId,
+        result.finished.ride,
+        result.finished.invoice,
+        result.finished.serverTime,
+      );
+    }
+    return reply.code(200).send(result.ride);
   });
 
   app.post('/api/rides/:id/resume', async (request, reply) => {

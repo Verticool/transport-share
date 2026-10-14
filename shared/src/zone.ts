@@ -349,9 +349,16 @@ export function bearingOf(direction: SteerDirection): number {
  * Общая функция домена: мок-клиент и сервер обязаны двигать самокат одинаково, иначе проверка
  * сценариев «выехал за зону — вернулся» даёт разные результаты в зависимости от источника данных.
  */
-export function steeredPosition(from: LatLng, direction: SteerDirection): LatLng {
-  return moveByBearing(from, STEER_STEP_M, bearingOf(direction));
+export function steeredPosition(
+  from: LatLng,
+  direction: SteerDirection,
+  stepM: number = STEER_STEP_M,
+): LatLng {
+  return moveByBearing(from, stepM, bearingOf(direction));
 }
+
+/** Допустимые шаги руля: обычный и «крупный» — им быстро выезжают за границу зоны для проверки. */
+export const STEER_STEPS_M = [STEER_STEP_M, 200] as const;
 
 export function bearingDeg(from: LatLng, to: LatLng): number {
   const lat1 = toRad(from.lat);

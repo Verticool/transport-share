@@ -45,6 +45,9 @@ test('поездка с карты под вторым демо-входом: б
   await expect(page.getByTestId('ride-panel')).toBeVisible();
   await expect(page.getByTestId('ride-panel')).toContainText('Едем');
 
+  // Заряд самоката виден прямо в панели поездки: это такая же рабочая цифра, как время и сумма.
+  await expect(page.getByTestId('ride-battery')).toContainText('заряд');
+
   // Пауза — то место, где раньше появлялась ошибка про ненайденного пользователя.
   await page.getByRole('button', { name: 'Пауза' }).click();
   await expect(page.getByTestId('ride-panel')).toContainText('Пауза — время тарифицируется отдельно');

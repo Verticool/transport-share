@@ -350,11 +350,11 @@ export class HttpApiClient implements ApiClient {
     return this.rideAction(rideId, 'push-to-zone', token);
   }
 
-  async steerRide(rideId: string, direction: SteerDirection, token: string) {
+  async steerRide(rideId: string, direction: SteerDirection, stepM: number, token: string) {
     const parsed = RideResponseSchema.parse(
       await this.authorized(`/api/rides/${rideId}/steer`, token, {
         method: 'POST',
-        body: JSON.stringify({ direction }),
+        body: JSON.stringify({ direction, stepM }),
       }),
     );
     // Форма ответа та же, что у остальных действий поездки: снимок с тарифом и временем сервера.
@@ -364,6 +364,31 @@ export class HttpApiClient implements ApiClient {
       tariff: HttpApiClient.tariffOf(parsed.tariff),
       serverTime: parsed.serverTime,
     };
+  }
+
+  async drainRide(rideId: string, pct: number, token: string) {
+    const parsed = RideResponseSchema.parse(
+      await this.authorized(`/api/rides/${rideId}/drain`, token, {
+        method: 'POST',
+        body: JSON.stringify({ pct }),
+      }),
+    );
+    return {
+      ride: parsed.ride,
+      pauses: parsed.pauses,
+      tariff: HttpApiClient.tariffOf(parsed.tariff),
+      serverTime: parsed.serverTime,
+    };
+  }
+
+  async shortenBooking(bookingId: string, minutes: number, token: string): Promise<Booking> {
+    const parsed = BookingResponseSchema.parse(
+      await this.authorized(`/api/bookings/${bookingId}/shorten`, token, {
+        method: 'POST',
+        body: JSON.stringify({ minutes }),
+      }),
+    );
+    return parsed.booking;
   }
 
   async login(email: string, password: string): Promise<{ user: PublicUser; token: string; refreshToken: string }> {

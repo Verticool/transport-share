@@ -54,6 +54,46 @@ describe('ParkPanel', () => {
     expect(within(summary).getByRole('button', { name: 'Забронирован: 0' })).toBeInTheDocument();
   });
 
+  it('подписывает колонку расстояния: это удалённость от центра зоны, а не путь поездки', () => {
+    renderPanel();
+
+    // Без подписи число справа читалось как «сколько проехал самокат» — и уменьшение значения при
+    // движении выглядело ошибкой. Подпись объясняет, от какой точки считается расстояние.
+    const header = screen.getByTestId('park-list-header');
+    expect(header).toHaveTextContent('Самокат');
+    expect(header).toHaveTextContent('Заряд');
+    expect(header).toHaveTextContent('До центра зоны');
+    expect(screen.getByTestId('park-list')).toHaveAttribute(
+      'aria-label',
+      'Самокаты: удалённость от центра зоны обслуживания',
+    );
+  });
+
+  it('приближение самоката к центру зоны поднимает его в списке', () => {
+    // Тот же самокат подъезжает к центру: список пересортировывается, значение в колонке падает.
+    // Так и должно быть для удалённости — и именно это раньше выглядело ошибкой.
+    const far = makeScooter({ id: 'moving', code: 'DV-900', status: 'free', lat: 42.95, lng: 74.65 });
+    const props = {
+      scooters: [NEAR, far],
+      allScooters: [NEAR, far],
+      statusFilter: [...ALL_STATUSES],
+      onToggleStatus: vi.fn(),
+      loading: false,
+      error: null,
+      selectedId: null,
+      onSelect: vi.fn(),
+      onReload: vi.fn(),
+    };
+    const { rerender } = render(<ParkPanel {...props} />);
+    expect(listCodes()).toEqual(['DV-001', 'DV-900']);
+
+    // Ближе к центру зоны (42.86, 74.58), чем NEAR: теперь этот самокат идёт первым.
+    const closer = makeScooter({ id: 'moving', code: 'DV-900', status: 'free', lat: 42.861, lng: 74.5795 });
+    rerender(<ParkPanel {...props} scooters={[NEAR, closer]} allScooters={[NEAR, closer]} />);
+
+    expect(listCodes()).toEqual(['DV-900', 'DV-001']);
+  });
+
   it('сортирует список по удалённости от центра города', () => {
     renderPanel();
     expect(listCodes()).toEqual(['DV-001', 'DV-003', 'DV-002']);

@@ -47,7 +47,9 @@ export interface RideState {
    *
    * Нужен, чтобы проверить сценарии границы зоны: без него самокат возит симулятор и всегда внутри.
    */
-  steer: (direction: SteerDirection) => Promise<void>;
+  steer: (direction: SteerDirection, stepM: number) => Promise<void>;
+  /** Разряд батареи для проверки автофиниша: снять проценты с заряда самоката. */
+  drain: (pct: number) => Promise<void>;
 }
 
 export interface UseRideOptions {
@@ -226,13 +228,26 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
   }, [runAction, clientInstance, ride, token]);
 
   const steer = useCallback(
-    (direction: SteerDirection) => {
+    (direction: SteerDirection, stepM: number) => {
       if (ride === null || token === null) {
         return Promise.resolve();
       }
       return runAction(
-        () => clientInstance.steerRide(ride.id, direction, token),
+        () => clientInstance.steerRide(ride.id, direction, stepM, token),
         'Не удалось сдвинуть самокат',
+      );
+    },
+    [runAction, clientInstance, ride, token],
+  );
+
+  const drain = useCallback(
+    (pct: number) => {
+      if (ride === null || token === null) {
+        return Promise.resolve();
+      }
+      return runAction(
+        () => clientInstance.drainRide(ride.id, pct, token),
+        'Не удалось разрядить батарею',
       );
     },
     [runAction, clientInstance, ride, token],
@@ -267,5 +282,6 @@ export function useRide(client?: ApiClient, options: UseRideOptions = {}): RideS
     finish,
     pushToZone,
     steer,
+    drain,
   };
 }

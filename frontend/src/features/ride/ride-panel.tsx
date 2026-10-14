@@ -1,6 +1,16 @@
-import { formatDuration, formatMinor, type Minor, type RideStatus, type SteerDirection } from '@sharing/shared';
+import {
+  formatDuration,
+  formatMinor,
+  STEER_STEP_M,
+  type Minor,
+  type RideStatus,
+  type SteerDirection,
+} from '@sharing/shared';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Pause, Play, Square } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+
+/** Крупный шаг руля: им быстро выезжают за границу зоны обслуживания для проверки. */
+const STEER_BIG_STEP_M = 200;
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -19,6 +29,8 @@ export interface RidePanelProps {
   currencySymbol: string;
   /** Можно ли завершить поездку здесь: вне зоны обслуживания — нет. */
   canFinishHere: boolean;
+  /** Заряд самоката, на котором идёт поездка: в поездке он так же важен, как время и сумма. */
+  batteryPct: number | null;
   /** Связь с источником данных потеряна: сумма считается, но может отставать. */
   offline: boolean;
   busy: boolean;
@@ -29,7 +41,9 @@ export interface RidePanelProps {
   /** Возврат самоката в зону: за границей завершить поездку нельзя. */
   onPushToZone: () => void;
   /** Руль для проверки границы зоны: сдвинуть самокат на шаг в выбранную сторону. */
-  onSteer: (direction: SteerDirection) => void;
+  onSteer: (direction: SteerDirection, stepM: number) => void;
+  /** Разряд батареи для проверки автофиниша: снять проценты с заряда самоката. */
+  onDrain: (pct: number) => void;
 }
 
 /**
@@ -66,6 +80,7 @@ export function RidePanel({
   amount,
   currencySymbol,
   canFinishHere,
+  batteryPct,
   offline,
   busy,
   error,
@@ -74,13 +89,22 @@ export function RidePanel({
   onFinish,
   onPushToZone,
   onSteer,
+  onDrain,
 }: RidePanelProps) {
   const paused = status === 'paused';
+  // Шаг руля: 20 м — обычный, 200 м — крупный, чтобы быстро выехать за границу зоны для проверки.
+  const [stepM, setStepM] = useState<number>(STEER_STEP_M);
 
   return (
     <Card data-testid="ride-panel">
       <CardHeader>
-        <CardTitle>Поездка на {scooterCode}</CardTitle>
+        <CardTitle className="flex items-baseline justify-between gap-2">
+          <span>Поездка на {scooterCode}</span>
+          {/* Заряд рядом с состоянием: во время поездки это такая же важная цифра, как время и сумма. */}
+          <span className="tabular text-sm font-normal text-muted-foreground" data-testid="ride-battery">
+            {batteryPct === null ? 'заряд —' : `заряд ${batteryPct} %`}
+          </span>
+        </CardTitle>
         <CardDescription>{paused ? 'Пауза — время тарифицируется отдельно' : 'Едем'}</CardDescription>
       </CardHeader>
 
@@ -180,19 +204,31 @@ export function RidePanel({
           </div>
           <div className="grid w-32 grid-cols-3 justify-items-center gap-1 self-center">
             <span aria-hidden />
-            <SteerButton label="Сдвинуть самокат на север" disabled={busy || paused} onClick={() => onSteer('north')}>
+            <SteerButton label="Сдвинуть самокат на север" disabled={busy || paused} onClick={() => onSteer('north', stepM)}>
               <ArrowUp className="size-4" aria-hidden />
             </SteerButton>
             <span aria-hidden />
-            <SteerButton label="Сдвинуть самокат на запад" disabled={busy || paused} onClick={() => onSteer('west')}>
+            <SteerButton label="Сдвинуть самокат на запад" disabled={busy || paused} onClick={() => onSteer('west', stepM)}>
               <ArrowLeft className="size-4" aria-hidden />
             </SteerButton>
-            <span aria-hidden />
-            <SteerButton label="Сдвинуть самокат на восток" disabled={busy || paused} onClick={() => onSteer('east')}>
+            {/* Переключатель шага — «пилюля» в центре крестовины: обычный шаг 20 м и крупный 200 м,
+                которым быстро выезжают за границу зоны. Выбор показан прямо на кнопке. */}
+            <button
+              type="button"
+              aria-label={`Шаг управления: ${stepM} метров. Нажмите, чтобы сменить`}
+              aria-pressed={stepM === STEER_BIG_STEP_M}
+              disabled={busy}
+              onClick={() => setStepM(stepM === STEER_STEP_M ? STEER_BIG_STEP_M : STEER_STEP_M)}
+              className="tabular h-6 min-w-11 rounded-full border bg-background px-2 text-[11px] font-medium transition-colors hover:bg-accent disabled:opacity-50"
+              data-testid="steer-step"
+            >
+              {stepM} м
+            </button>
+            <SteerButton label="Сдвинуть самокат на восток" disabled={busy || paused} onClick={() => onSteer('east', stepM)}>
               <ArrowRight className="size-4" aria-hidden />
             </SteerButton>
             <span aria-hidden />
-            <SteerButton label="Сдвинуть самокат на юг" disabled={busy || paused} onClick={() => onSteer('south')}>
+            <SteerButton label="Сдвинуть самокат на юг" disabled={busy || paused} onClick={() => onSteer('south', stepM)}>
               <ArrowDown className="size-4" aria-hidden />
             </SteerButton>
             <span aria-hidden />
@@ -202,6 +238,18 @@ export function RidePanel({
               ? 'На паузе мотор выключен — сначала продолжите поездку.'
               : 'Нужно, чтобы проверить границу зоны: выехать за неё и вернуться.'}
           </p>
+          {/* В жизни заряд падает примерно на процент в минуту, поэтому автофиниш по разряду
+              проверяют этой кнопкой, а не часом ожидания. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy || paused || batteryPct === 0}
+            onClick={() => onDrain(10)}
+            data-testid="ride-drain"
+          >
+            −10 % заряда
+          </Button>
         </div>
       </CardContent>
     </Card>

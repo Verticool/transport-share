@@ -31,6 +31,7 @@ export function MapPage() {
     error: bookingError,
     book,
     cancel,
+    shorten,
     refresh: refreshBooking,
   } = useBooking();
   const ride = useRide();
@@ -97,6 +98,9 @@ export function MapPage() {
       : (scooters.find((scooter) => scooter.id === ride.ride?.scooterId) ?? null);
 
   const activeRide = ride.ride !== null && ride.ride.status !== 'finished';
+  // Заряд самоката поездки: панель поездки показывает его рядом с состоянием и обновляет вместе
+  // с парком — приезжает тем же потоком, что и остальные данные.
+  const rideBattery = rideScooter?.batteryPct ?? null;
   // Завершить поездку можно только внутри зоны: самокат сам не двигается (симулятор — S9),
   // но положение берём из данных, а не из предположений интерфейса.
   const canFinishHere =
@@ -138,8 +142,12 @@ export function MapPage() {
             onFinish={() => {
               void handleFinishRide();
             }}
-            onSteer={(direction) => {
-              void ride.steer(direction);
+            batteryPct={rideBattery}
+            onSteer={(direction, stepM) => {
+              void ride.steer(direction, stepM);
+            }}
+            onDrain={(pct) => {
+              void ride.drain(pct);
             }}
             onPushToZone={() => {
               void ride.pushToZone();
@@ -158,6 +166,9 @@ export function MapPage() {
             }}
             onCancel={() => {
               void cancel();
+            }}
+            onShorten={(minutes) => {
+              void shorten(minutes);
             }}
           />
         )}
