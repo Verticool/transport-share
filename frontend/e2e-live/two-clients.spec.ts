@@ -110,10 +110,23 @@ test('два клиента бронируют одновременно: оди�
     await expect(firstPage.getByTestId('scooter-card')).toBeVisible();
     await expect(secondPage.getByTestId('scooter-card')).toBeVisible();
 
-    await Promise.all([
-      firstPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
-      secondPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
+    // Жмём одновременно. Второй клик может не пройти вовсе: если первый успел занять самокат,
+    // у второго кнопка уже недоступна — это тоже правильный исход, и падать из-за него нельзя.
+    const clicks = await Promise.all([
+      firstPage
+        .getByTestId('scooter-card')
+        .getByRole('button', { name: 'Забронировать' })
+        .click()
+        .then(() => true)
+        .catch(() => false),
+      secondPage
+        .getByTestId('scooter-card')
+        .getByRole('button', { name: 'Забронировать' })
+        .click({ timeout: 3000 })
+        .then(() => true)
+        .catch(() => false),
     ]);
+    expect(clicks.some(Boolean)).toBe(true);
 
     // Ровно один получает бронь: второй видит самокат занятым, а не «тихую» вторую бронь.
     // Проверяем по состоянию самоката и числу броней, а не по конкретному тексту отказа:
@@ -142,10 +155,23 @@ test('два клиента бронируют одновременно: оди�
 
     await firstFree.click();
     await secondFree.click();
-    await Promise.all([
-      firstPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
-      secondPage.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click(),
+    // Жмём одновременно. Второй клик может не пройти вовсе: если первый успел занять самокат,
+    // у второго кнопка уже недоступна — это тоже правильный исход, и падать из-за него нельзя.
+    const bookings = await Promise.all([
+      firstPage
+        .getByTestId('scooter-card')
+        .getByRole('button', { name: 'Забронировать' })
+        .click()
+        .then(() => true)
+        .catch(() => false),
+      secondPage
+        .getByTestId('scooter-card')
+        .getByRole('button', { name: 'Забронировать' })
+        .click({ timeout: 3000 })
+        .then(() => true)
+        .catch(() => false),
     ]);
+    expect(bookings.some(Boolean)).toBe(true);
 
     // Обе брони прошли: разные самокаты друг другу не мешают.
     await expect(firstPage.getByTestId('booking-panel')).toBeVisible();
@@ -153,6 +179,51 @@ test('два клиента бронируют одновременно: оди�
   } finally {
     await first.close();
     await second.close();
+  }
+});
+
+test('истёкший доступ продлевается сам: пользователя не выбрасывает на вход', async ({ browser }) => {
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await clearAccount(page, DEMO);
+    await signIn(page, DEMO);
+
+    // Так выглядит протухший доступ: страницу не перезагружали, но токен доступа больше не
+    // принимается. Токен обновления в сохранённой сессии остаётся — им и продлеваем.
+    await page.evaluate(() => {
+      const key = 'dvizh:session';
+      const raw = window.localStorage.getItem(key);
+      if (raw === null) {
+        throw new Error('сессия не сохранена');
+      }
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed !== 'object' || parsed === null) {
+        throw new Error('сессия сохранена в неожиданной форме');
+      }
+      window.localStorage.setItem(key, JSON.stringify({ ...parsed, token: 'stale.access.token' }));
+    });
+
+    await page.reload();
+
+    // Экран должен ожить сам: клиент получает отказ доступа, продлевает сессию по токену
+    // обновления и повторяет запрос. Никакого «войдите заново» здесь быть не должно.
+    await expect(page.getByTestId('park-list').getByRole('button').first()).toBeVisible();
+    await expect(page.getByText('войдите заново', { exact: false })).toHaveCount(0);
+
+    const stored = await page.evaluate(() => window.localStorage.getItem('dvizh:session'));
+    if (stored === null) {
+      throw new Error('сессия пропала из хранилища');
+    }
+    const parsed: unknown = JSON.parse(stored);
+    if (typeof parsed !== 'object' || parsed === null || !('token' in parsed)) {
+      throw new Error('в сохранённой сессии нет токена');
+    }
+    const token = String(parsed.token);
+    // Токен заменён на рабочий: продление прошло и приложение сохранило новую пару.
+    expect(token).not.toBe('stale.access.token');
+  } finally {
+    await context.close();
   }
 });
 

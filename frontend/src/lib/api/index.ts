@@ -1,3 +1,4 @@
+import { useSessionStore } from '../../stores/session';
 import { HttpApiClient } from './http-client';
 import { MockApiClient } from './mock-client';
 import type { ApiClient } from './types';
@@ -39,8 +40,34 @@ export function readApiMode(): ApiMode {
  */
 let sharedClient: ApiClient | null = null;
 
+/**
+ * Клиент сервера, связанный с сессией приложения.
+ *
+ * Клиент хранит токен обновления у себя, поэтому его нужно и восстановить из сохранённого входа
+ * (иначе после перезагрузки страницы продление невозможно, и пользователя выбрасывает на вход),
+ * и обновлять при каждом изменении сессии. Продление прозрачное: при истёкшем доступе клиент сам
+ * продлевает его и повторяет запрос, а если продлить нечем — приложение сбрасывает авторизацию.
+ */
+function createHttpClient(): HttpApiClient {
+  const client = new HttpApiClient({
+    onTokenRefreshed: (tokens) => {
+      useSessionStore.getState().updateTokens(tokens);
+    },
+    onSessionExpired: () => {
+      useSessionStore.getState().signOut();
+    },
+  });
+  client.rememberRefreshToken(useSessionStore.getState().refreshToken);
+  useSessionStore.subscribe((state, previous) => {
+    if (state.refreshToken !== previous.refreshToken) {
+      client.rememberRefreshToken(state.refreshToken);
+    }
+  });
+  return client;
+}
+
 export function createApiClient(mode: ApiMode = readApiMode()): ApiClient {
-  sharedClient ??= mode === 'http' ? new HttpApiClient() : new MockApiClient();
+  sharedClient ??= mode === 'http' ? createHttpClient() : new MockApiClient();
   return sharedClient;
 }
 

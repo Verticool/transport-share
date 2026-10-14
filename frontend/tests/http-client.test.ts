@@ -14,6 +14,23 @@ interface Call {
   init: RequestInit;
 }
 
+/** Профиль пользователя в форме, которую отдаёт сервер. */
+const publicUser = (): unknown => ({
+  id: '22222222-2222-4222-8222-222222222222',
+  email: 'demo@sharing.kg',
+  name: 'Демо',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+});
+
+/** Ответ продления сессии: новая пара токенов. */
+const sessionResponse = (token: string, refreshToken: string): unknown => ({
+  user: publicUser(),
+  token,
+  refreshToken,
+  expiresAt: '2026-01-01T00:05:00.000Z',
+});
+
 const jsonResponse = (status: number, body: unknown): Response =>
   new Response(JSON.stringify(body), {
     status,
@@ -133,6 +150,70 @@ describe('HTTP-клиент', () => {
 
     await expect(client.getInvoices('tk-stale')).rejects.toBeInstanceOf(ApiClientError);
     expect(calls).toHaveLength(1);
+  });
+
+  it('после перезагрузки страницы продление работает по сохранённому входу', async () => {
+    // Так выглядит обычная жизнь: страницу обновили, доступ успел истечь. Токен обновления
+    // приложение берёт из сохранённой сессии — без этого пользователя выбрасывало на вход.
+    const calls = installFetch([
+      () => jsonResponse(401, { code: 'unauthorized', message: 'Токен истёк' }),
+      () => jsonResponse(200, sessionResponse('tk-access-2', 'rt-2')),
+      () => jsonResponse(200, { user: publicUser() }),
+    ]);
+    const refreshed: string[] = [];
+    const client = new HttpApiClient({
+      baseUrl: '',
+      onTokenRefreshed: (session) => refreshed.push(session.refreshToken),
+    });
+    client.rememberRefreshToken('rt-from-storage');
+
+    await client.getMe('tk-access-1');
+
+    expect(calls.map((call) => call.url)).toEqual(['/api/me', '/api/auth/refresh', '/api/me']);
+    expect(refreshed).toEqual(['rt-2']);
+    const headers = new Headers(calls[2]?.init.headers);
+    expect(headers.get('authorization')).toBe('Bearer tk-access-2');
+  });
+
+  it('два одновременных запроса продлевают сессию один раз, а не гонкой', async () => {
+    const calls = installFetch([
+      () => jsonResponse(401, { code: 'unauthorized', message: 'Токен истёк' }),
+      () => jsonResponse(401, { code: 'unauthorized', message: 'Токен истёк' }),
+      () => jsonResponse(200, sessionResponse('tk-access-2', 'rt-2')),
+      () => jsonResponse(200, { user: publicUser() }),
+      () => jsonResponse(200, { user: publicUser() }),
+    ]);
+    const client = new HttpApiClient({ baseUrl: '' });
+    client.rememberRefreshToken('rt-1');
+
+    // Оба экрана запрашивают данные разом: продление должно быть одно на всех.
+    await Promise.all([client.getMe('tk-access-1'), client.getMe('tk-access-1')]);
+
+    const refreshCalls = calls.filter((call) => call.url === '/api/auth/refresh');
+    expect(refreshCalls).toHaveLength(1);
+  });
+
+  it('продлить не вышло — приложение сбрасывает авторизацию, а не живёт с мёртвым токеном', async () => {
+    const calls = installFetch([
+      () => jsonResponse(401, { code: 'unauthorized', message: 'Токен недействителен — войдите заново' }),
+      () => jsonResponse(401, { code: 'unauthorized', message: 'Сессия истекла — войдите заново' }),
+      () => jsonResponse(401, { code: 'unauthorized', message: 'Токен недействителен — войдите заново' }),
+    ]);
+    const expired: number[] = [];
+    const client = new HttpApiClient({
+      baseUrl: '',
+      onSessionExpired: () => expired.push(1),
+    });
+    client.rememberRefreshToken('rt-dead');
+
+    await expect(client.getMe('tk-stale')).rejects.toBeInstanceOf(ApiClientError);
+    expect(expired).toHaveLength(1);
+
+    // Токен обновления забыт: второй запрос не дёргает продление заведомо мёртвым токеном
+    // и не сообщает о сбросе повторно — вход уже сброшен.
+    await expect(client.getMe('tk-stale')).rejects.toBeInstanceOf(ApiClientError);
+    expect(calls.filter((call) => call.url === '/api/auth/refresh')).toHaveLength(1);
+    expect(expired).toHaveLength(1);
   });
 
   it('занятый самокат — конфликт, а не пустая ошибка', async () => {

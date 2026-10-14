@@ -89,6 +89,13 @@ export interface HttpApiClientOptions {
   now?: () => number;
   /** Как приложение узнаёт об обновлённом токене доступа после прозрачного продления. */
   onTokenRefreshed?: (session: { token: string; refreshToken: string }) => void;
+  /**
+   * Сессию продлить не удалось: сохранённый вход больше не действует.
+   *
+   * Это сигнал «выйти», а не «показать ошибку»: держать экран с протухшим доступом — обман.
+   * Приложение по этому вызову чистит сессию и возвращает форму входа.
+   */
+  onSessionExpired?: () => void;
 }
 
 const STATUS_TO_CODE: Record<number, ApiErrorCode> = {
@@ -113,18 +120,36 @@ export class HttpApiClient implements ApiClient {
   private readonly baseUrl: string;
   private readonly now: () => number;
   private readonly onTokenRefreshed: (session: { token: string; refreshToken: string }) => void;
+  private readonly onSessionExpired: () => void;
   private refreshToken: string | null = null;
   private refreshing: Promise<string | null> | null = null;
+  // О сбросе авторизации сообщаем один раз: несколько одновременных отказов не должны давать
+  // несколько «выходов» — приложение и так уже вернулось на форму входа.
+  private expiredNotified = false;
 
   constructor(options: HttpApiClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? '';
     this.now = options.now ?? (() => Date.now());
     this.onTokenRefreshed = options.onTokenRefreshed ?? (() => undefined);
+    this.onSessionExpired = options.onSessionExpired ?? (() => undefined);
   }
 
   /** Запоминает токен обновления: без него продление доступа невозможно. */
   rememberRefreshToken(token: string | null): void {
     this.refreshToken = token;
+    if (token !== null) {
+      // Сессия снова есть — следующее истечение снова заслуживает сообщения.
+      this.expiredNotified = false;
+    }
+  }
+
+  /** Сообщает приложению, что продлить сессию нечем: оно сбрасывает вход. */
+  private notifySessionExpired(): void {
+    if (this.expiredNotified) {
+      return;
+    }
+    this.expiredNotified = true;
+    this.onSessionExpired();
   }
 
   private async fetchJson(path: string, init: RequestInit = {}): Promise<unknown> {
@@ -175,6 +200,9 @@ export class HttpApiClient implements ApiClient {
 
       const renewed = await this.renew();
       if (renewed === null) {
+        // Продлить нечем: сохранённый вход недействителен. Сообщаем приложению — оно сбрасывает
+        // авторизацию и показывает вход, вместо того чтобы оставить пользователя с мёртвым токеном.
+        this.notifySessionExpired();
         throw error;
       }
       return this.fetchJson(path, {
@@ -201,9 +229,13 @@ export class HttpApiClient implements ApiClient {
         });
         const session = SessionResponseSchema.parse(raw);
         this.refreshToken = session.refreshToken;
+        this.expiredNotified = false;
         this.onTokenRefreshed({ token: session.token, refreshToken: session.refreshToken });
         return session.token;
       } catch {
+        // Токен обновления тоже не прошёл: он отозван или истёк. Забываем его — иначе каждый
+        // следующий запрос снова и снова дёргал бы сервер заведомо мёртвым токеном.
+        this.refreshToken = null;
         return null;
       } finally {
         this.refreshing = null;
