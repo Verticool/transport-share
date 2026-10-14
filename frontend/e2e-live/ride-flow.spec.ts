@@ -80,6 +80,25 @@ test('поездка с карты под вторым демо-входом: б
   expect(await countRides(page)).toBeGreaterThan(0);
   await expect(page.getByTestId('rides-list').getByText('Идёт')).toHaveCount(0);
 
+  // История и счета обязаны сходиться: минуты езды в списке поездок и в счёте — одни и те же
+  // (раньше список показывал округлённую длительность, и числа расходились).
+  await nav(page, 'Поездки');
+  const rideRow = page.getByTestId('rides-list').getByRole('listitem').first();
+  const rideText = await rideRow.innerText();
+  const rideMinutes = /Езда (\d+) мин/.exec(rideText.replace(/\s+/g, ' '));
+
+  await nav(page, 'Счета');
+  const invoiceCard = page.getByTestId('invoices-list').getByRole('listitem').first();
+  const invoiceText = (await invoiceCard.innerText()).replace(/\s+/g, ' ');
+  const invoiceMinutes = /Езда · (\d+) мин/.exec(invoiceText);
+
+  expect(rideMinutes).not.toBeNull();
+  expect(invoiceMinutes).not.toBeNull();
+  expect(rideMinutes?.[1]).toBe(invoiceMinutes?.[1]);
+  // В счёте дата — момент выставления, поэтому она подписана: «Счёт от …». Иначе рядом со временем
+  // начала поездки в истории она читалась как расхождение данных.
+  expect(invoiceText).toContain('Счёт от');
+
   // Письмо со счётом: после завершения поездки оно должно прийти на почту — это требование ТЗ
   // (почта эмулируется, но письмо настоящее: его видно во «Входящих»).
   await nav(page, 'Входящие');

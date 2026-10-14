@@ -32,6 +32,13 @@ export function formatDateTime(iso: string): string {
   return DATE_TIME.format(new Date(iso));
 }
 
+const TIME_ONLY = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+/** Только время: «13:20» — для периода поездки и момента выставления счёта. */
+export function formatTime(iso: string): string {
+  return TIME_ONLY.format(new Date(iso));
+}
+
 /** Длительность в минутах для истории: «12 мин», «1 ч 05 мин». */
 export function formatMinutes(minutes: number): string {
   if (minutes < 60) {

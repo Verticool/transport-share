@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { formatDateTime, formatMinutes } from '../../lib/format';
+import { formatDateTime, formatMinutes, formatTime } from '../../lib/format';
 import { RIDES_PAGE_SIZE, useRides } from '../account/use-account';
 
 /** Причина завершения поездки — словами, а не техническим кодом. */
@@ -53,22 +53,21 @@ export function RidesPage() {
           {error === null && (
             <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto" data-testid="rides-list">
               {data.items.map((ride) => {
-                const minutes =
-                  ride.finishedAt === null
-                    ? 0
-                    : Math.max(
-                        1,
-                        Math.round((Date.parse(ride.finishedAt) - Date.parse(ride.startedAt)) / 60_000),
-                      );
-
+                // Минуты к оплате приходят посчитанными доменом — теми же, что в счёте. Свой расчёт
+                // длительности давал другое число (округление против тарифицируемых минут).
                 return (
                   <li
                     key={ride.id}
                     className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-sm"
                   >
                     <span className="font-medium">{formatDateTime(ride.startedAt)}</span>
+                    {ride.finishedAt !== null && (
+                      <span className="tabular text-xs text-muted-foreground">
+                        {`до ${formatTime(ride.finishedAt)}`}
+                      </span>
+                    )}
                     <span className="tabular text-xs text-muted-foreground">
-                      {formatMinutes(minutes)}
+                      {`Езда ${formatMinutes(ride.rideMinutes)} · пауза ${formatMinutes(ride.pauseMinutes)}`}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {ride.endReason === null ? 'Идёт' : (END_REASON_LABEL[ride.endReason] ?? ride.endReason)}

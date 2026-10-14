@@ -329,6 +329,39 @@ suite('счета и письма', () => {
     expect(wrongStep.statusCode).toBe(400);
   });
 
+  it('список поездок отдаёт те же минуты, что и счёт: история и счета не расходятся', async () => {
+    const token = await reset();
+    const { rideId } = await startRide(token);
+    const finished = await finish(token, rideId);
+    expect(finished.ride.status).toBe('finished');
+
+    const rides = await bundle.app.inject({
+      method: 'GET',
+      url: '/api/rides?limit=5&offset=0',
+      headers: auth(token),
+    });
+    expect(rides.statusCode).toBe(200);
+
+    // В списке истории минуты считает домен — ровно так же, как в счёте. Раньше список показывал
+    // округлённую длительность, и по одной поездке числа в «Поездках» и «Счетах» различались.
+    const item = z
+      .object({
+        items: z.array(
+          RideSchema.and(
+            z.object({
+              rideMinutes: z.number().int(),
+              pauseMinutes: z.number().int(),
+            }),
+          ),
+        ),
+      })
+      .parse(rides.json())
+      .items.find((candidate) => candidate.id === rideId);
+    expect(item?.rideMinutes).toBe(finished.invoice.breakdown.rideMinutes);
+    expect(item?.pauseMinutes).toBe(finished.invoice.breakdown.pauseMinutes);
+    expect(item?.rideMinutes ?? 0).toBeGreaterThan(0);
+  });
+
   it('разряд батареи: при нуле поездка закрывается сама и приходит счёт', async () => {
     const token = await reset();
     const { rideId, scooterId } = await startRide(token);

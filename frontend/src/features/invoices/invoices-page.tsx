@@ -42,7 +42,11 @@ export function InvoicesPage() {
               {data.map((invoice) => (
                 <li key={invoice.id} className="rounded-lg border p-3">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm font-medium">{formatDateTime(invoice.issuedAt)}</span>
+                    {/* Дата счёта — момент выставления (поездка завершилась), а не её начало: так
+                        «Поездки» и «Счета» не выглядят расходящимися по времени. */}
+                    <span className="text-sm font-medium">
+                      {`Счёт от ${formatDateTime(invoice.issuedAt)}`}
+                    </span>
                     <span className="tabular text-sm font-semibold">
                       {formatMinor(invoice.amount, invoice.currency === 'KGS' ? 'сом' : invoice.currency)}
                     </span>

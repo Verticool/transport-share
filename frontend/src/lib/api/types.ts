@@ -105,7 +105,7 @@ export interface ApiClient {
   /** Текущий пользователь по токену — проверка сессии при загрузке приложения. */
   getMe(token: string): Promise<PublicUser>;
   /** История поездок пользователя, свежие сверху. */
-  getRides(query: PageQuery, token: string): Promise<Page<Ride>>;
+  getRides(query: PageQuery, token: string): Promise<Page<RideListItem>>;
   /** Счета пользователя, свежие сверху. */
   getInvoices(token: string): Promise<Invoice[]>;
   /** Входящие письма (эмуляция почты), свежие сверху. */
@@ -138,6 +138,17 @@ export interface Page<T> {
 }
 
 /** Запрос страницы списка (RULES: разбирается схемой `RidesQuerySchema`). */
+/**
+ * Поездка в списке истории: доменная поездка плюс минуты к оплате.
+ *
+ * Минуты считает домен по сегментам (та же функция, что в счёте): без них список показывал
+ * округлённую длительность, и по одной поездке «Поездки» и «Счета» расходились.
+ */
+export interface RideListItem extends Ride {
+  rideMinutes: number;
+  pauseMinutes: number;
+}
+
 export interface PageQuery {
   limit: number;
   offset: number;

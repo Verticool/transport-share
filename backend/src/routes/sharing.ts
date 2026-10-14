@@ -1,4 +1,4 @@
-import { CreateBookingRequestSchema, RidesQuerySchema, SteerDirectionSchema } from '@sharing/shared';
+import { billRide, CreateBookingRequestSchema, RidesQuerySchema, SteerDirectionSchema } from '@sharing/shared';
 import type { FastifyInstance } from 'fastify';
 import type { Pool } from 'pg';
 import { z } from 'zod';
@@ -7,8 +7,8 @@ import { badRequest, invalidPayload, notFound } from '../http/errors';
 import { requireBearerToken } from '../http/context';
 import { listInvoiceRowsForUser, listEmailRowsForUser } from '../repo/invoices';
 import { findScooterRow } from '../repo/scooters';
-import { listRideRowsForUser } from '../repo/rides';
-import { toEmailMessage, toInvoice, toRide, toScooter } from '../repo/rows';
+import { listPauseRowsForRides, listRideRowsForUser } from '../repo/rides';
+import { toEmailMessage, toInvoice, toRide, toRidePause, toScooter } from '../repo/rows';
 import type { AuthService } from '../auth/service';
 import type { WsHub } from '../ws/hub';
 import type { BookingService } from '../services/booking-service';
@@ -285,8 +285,22 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
     }
 
     const page = await listRideRowsForUser(pool, user.id, parsed.data);
+    // Минуты к оплате считает домен — тот же расчёт, что в счёте. Иначе список «Поездки» и «Счета»
+    // показывали разные числа по одной и той же поездке (округление длительности против
+    // тарифицируемых минут по сегментам).
+    const pausesByRide = await listPauseRowsForRides(
+      pool,
+      page.items.map((row) => row.id),
+    );
+    const items = page.items.map((row) => {
+      const ride = toRide(row);
+      const pauses = (pausesByRide.get(row.id) ?? []).map(toRidePause);
+      const billed = billRide(ride, pauses, now());
+      return { ...ride, rideMinutes: billed.rideMinutes, pauseMinutes: billed.pauseMinutes };
+    });
+
     return reply.code(200).send({
-      items: page.items.map(toRide),
+      items,
       total: page.total,
       limit: parsed.data.limit,
       offset: parsed.data.offset,

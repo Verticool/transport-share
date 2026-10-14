@@ -10,6 +10,7 @@ import {
   ScooterSchema,
   SERVICE_ZONE,
   ServiceZoneSchema,
+  billRide,
   calcRidePrice,
   clampToZone,
   formatMinor,
@@ -35,6 +36,7 @@ import { z, type ZodType } from 'zod';
 import {
   ApiClientError,
   type ApiClient,
+  type RideListItem,
   type BookingSnapshot,
   type Page,
   type PageQuery,
@@ -807,7 +809,7 @@ export class MockApiClient implements ApiClient {
     return this.userByToken(token);
   }
 
-  async getRides(query: PageQuery, token: string): Promise<Page<Ride>> {
+  async getRides(query: PageQuery, token: string): Promise<Page<RideListItem>> {
     await this.applyDelay();
 
     const user = await this.userByToken(token);
@@ -826,8 +828,13 @@ export class MockApiClient implements ApiClient {
       (left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt),
     );
 
+    const page = mine.slice(query.offset, query.offset + query.limit);
     return {
-      items: mine.slice(query.offset, query.offset + query.limit),
+      // Минуты к оплате считает тот же домен, что и счёт: список истории обязан сходиться со счетами.
+      items: page.map((ride) => {
+        const billed = billRide(ride, this.ridesPauses(ride.id), this.state.now());
+        return { ...ride, rideMinutes: billed.rideMinutes, pauseMinutes: billed.pauseMinutes };
+      }),
       total: mine.length,
       limit: query.limit,
       offset: query.offset,

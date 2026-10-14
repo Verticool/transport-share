@@ -24,7 +24,14 @@ import type {
 } from '@sharing/shared';
 import { z } from 'zod';
 
-import { ApiClientError, type ApiClient, type ApiErrorCode, type Page, type PageQuery } from './types';
+import {
+  ApiClientError,
+  type ApiClient,
+  type ApiErrorCode,
+  type Page,
+  type PageQuery,
+  type RideListItem,
+} from './types';
 
 /** Схемы ответов сервера: разбор тот же, что и для моков, — интерфейс не доверяет форме ответа. */
 const ParkSchema = z.object({
@@ -54,8 +61,16 @@ const SessionResponseSchema = z.object({
   expiresAt: z.string(),
 });
 const MeSchema = z.object({ user: PublicUserSchema });
+// Схема Ride объявлена аннотированным `z.ZodType`, поэтому расширяем пересечением: поля поездки
+// плюс минуты к оплате, которые считает домен.
+const RideListItemSchema = RideSchema.and(
+  z.object({
+    rideMinutes: z.number().int().nonnegative(),
+    pauseMinutes: z.number().int().nonnegative(),
+  }),
+);
 const RidesPageSchema = z.object({
-  items: z.array(RideSchema),
+  items: z.array(RideListItemSchema),
   total: z.number(),
   limit: z.number(),
   offset: z.number(),
@@ -423,7 +438,7 @@ export class HttpApiClient implements ApiClient {
     return MeSchema.parse(await this.authorized('/api/me', token)).user;
   }
 
-  async getRides(query: PageQuery, token: string): Promise<Page<Ride>> {
+  async getRides(query: PageQuery, token: string): Promise<Page<RideListItem>> {
     const parsed = RidesPageSchema.parse(
       await this.authorized(`/api/rides?limit=${query.limit}&offset=${query.offset}`, token),
     );

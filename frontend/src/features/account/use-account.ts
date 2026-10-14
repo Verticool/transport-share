@@ -1,7 +1,14 @@
-import type { EmailMessage, Invoice, PublicUser, Ride } from '@sharing/shared';
+import type { EmailMessage, Invoice, PublicUser } from '@sharing/shared';
 import { useCallback, useEffect, useState } from 'react';
 
-import { ApiClientError, createApiClient, type ApiClient, type Page, type PageQuery } from '../../lib/api';
+import {
+  ApiClientError,
+  createApiClient,
+  type ApiClient,
+  type Page,
+  type PageQuery,
+  type RideListItem,
+} from '../../lib/api';
 import { useSessionStore } from '../../stores/session';
 
 /** Размер страницы истории поездок. */
@@ -73,10 +80,10 @@ function useLoaded<T>(
 }
 
 /** История поездок постранично. */
-export function useRides(page: number): Loadable<Page<Ride>> & { readonly page: number } {
+export function useRides(page: number): Loadable<Page<RideListItem>> & { readonly page: number } {
   const query: PageQuery = { limit: RIDES_PAGE_SIZE, offset: page * RIDES_PAGE_SIZE };
 
-  const state = useLoaded<Page<Ride>>(
+  const state = useLoaded<Page<RideListItem>>(
     (client, token) => client.getRides({ limit: query.limit, offset: query.offset }, token),
     { items: [], total: 0, limit: RIDES_PAGE_SIZE, offset: 0 },
     [query.limit, query.offset],

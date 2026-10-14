@@ -88,6 +88,34 @@ export async function closeOpenPause(db: Queryable, rideId: string): Promise<voi
   );
 }
 
+/**
+ * Паузы для набора поездок одним запросом.
+ *
+ * Нужны странице «Поездки»: минуты к оплате считает домен по паузам, и без них список показывал
+ * округлённую длительность, которая расходилась со счётом на ту же поездку.
+ */
+export async function listPauseRowsForRides(
+  db: Queryable,
+  rideIds: string[],
+): Promise<Map<string, RidePauseRow[]>> {
+  const grouped = new Map<string, RidePauseRow[]>();
+  if (rideIds.length === 0) {
+    return grouped;
+  }
+
+  const result = await db.query(
+    'SELECT * FROM ride_pauses WHERE ride_id = ANY($1::uuid[]) ORDER BY started_at',
+    [rideIds],
+  );
+  for (const row of result.rows) {
+    const parsed = RidePauseRowSchema.parse(row);
+    const list = grouped.get(parsed.ride_id) ?? [];
+    list.push(parsed);
+    grouped.set(parsed.ride_id, list);
+  }
+  return grouped;
+}
+
 export async function listPauseRows(db: Queryable, rideId: string): Promise<RidePauseRow[]> {
   const result = await db.query('SELECT * FROM ride_pauses WHERE ride_id = $1 ORDER BY started_at', [rideId]);
   return result.rows.map((row: unknown) => RidePauseRowSchema.parse(row));

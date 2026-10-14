@@ -12,6 +12,7 @@ export type {
   Page,
   PageQuery,
   ParkSnapshot,
+  RideListItem,
   RideSnapshot,
   SessionSnapshot,
 } from './types';
