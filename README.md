@@ -130,6 +130,7 @@ docker exec sharing-db psql -U sharing -d sharing -t \
 | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | предварительные требования, запуск (docker и dev-режим), что делать, если живой прогон падает |
 | [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md) | доказуемость: пункт ТЗ → команда проверки → сырой вывод |
 | [`docs/STATUS.md`](docs/STATUS.md) | честное состояние: что работает, что нет, что не делали и почему |
+| [`docs/WHAT-TO-DO-NEXT.md`](docs/WHAT-TO-DO-NEXT.md) | набросок будущего плана: границы доменов и инфраструктура, платежи, ограничения парка, админка, мобильные клиенты, тесты и полишинг |
 
 ## Структура
 
