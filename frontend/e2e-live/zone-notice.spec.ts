@@ -41,13 +41,17 @@ test('выезд из зоны: полоса и всплывающее опов�
   const directions = ['На север', 'На восток'];
   let leftZone = false;
   let presses = 0;
+  let usedDirection = '';
+  let pressesInZone = 0;
 
   for (const direction of directions) {
     for (let press = 0; press < 26; press += 1) {
       await page.getByRole('button', { name: direction }).click();
       presses += 1;
+      pressesInZone += 1;
       if (await banner.isVisible().catch(() => false)) {
         leftZone = true;
+        usedDirection = direction;
         break;
       }
     }
@@ -67,18 +71,15 @@ test('выезд из зоны: полоса и всплывающее опов�
   // Снимок состояния для отчёта: полоса под хедером, всплывающее оповещение и блок в панели.
   await page.screenshot({ path: 'test-results/outside-zone.png', fullPage: false });
 
-  // Возвращаемся в зону тем же путём: полоса снимается, приходит сообщение о разблокировке.
+  // Возвращаемся тем же маршрутом и тем же числом шагов (плюс запас): идти назад «наугад» долго,
+  // а всплывающее оповещение о разблокировке живёт считанные секунды и легко проскакивает.
   const backToast = page.getByTestId('toast-back-in-zone');
+  const backDirection = usedDirection === 'На север' ? 'На юг' : 'На запад';
   let returned = false;
-  for (const direction of ['На юг', 'На запад']) {
-    for (let press = 0; press < 26; press += 1) {
-      await page.getByRole('button', { name: direction }).click();
-      if (await backToast.isVisible().catch(() => false)) {
-        returned = true;
-        break;
-      }
-    }
-    if (returned) {
+  for (let press = 0; press < pressesInZone + 3; press += 1) {
+    await page.getByRole('button', { name: backDirection }).click();
+    if (await backToast.isVisible().catch(() => false)) {
+      returned = true;
       break;
     }
   }

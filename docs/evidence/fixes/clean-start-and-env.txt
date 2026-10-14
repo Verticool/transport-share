@@ -1,0 +1,132 @@
+Чистый запуск: требования к машине, .env, холодный старт. Дата: 14.10.2026.
+
+Что проверялось (требования ТЗ №8 «предварительные требования описаны» и №9 «быстро разворачивается
+локально», а также ТЗ «один docker compose, три контейнера»).
+
+## 1. На сырой машине нужен только Docker
+
+Оба образа ставят всё внутри себя: сборка фронта и запуск бэкенда идут на `node:22-alpine`
+(там же `npm ci` по lock-файлу), статика раздаётся `nginx:1.27-alpine`, база — `postgres:17-alpine`.
+Node, npm, Python и PostgreSQL на хосте не требуются. Проверка ниже выполнена на машине, где
+локальный Node есть, но в контейнеры он не попадает: единственная внешняя команда — `docker compose`.
+
+## 2. Настройки вынесены в `.env`, файл лежит в репозитории
+
+Было: значения (порты, креды базы, секрет токена, шаги симулятора) были захардкожены в
+`docker-compose.yml`, а `.env.example` описывал переменные, которых приложение не читало вовсе
+(`JWT_ACCESS_TTL`, `BOOKING_TTL_MINUTES`, тарифы и другие) — то есть правка окружения ни на что не
+влияла.
+
+Стало: `docker-compose.yml` берёт значения из окружения с дефолтами (`${FRONTEND_PORT:-8088}`,
+`${DB_PORT:-5433}`, `${LOG_LEVEL:-info}` и так далее), строка подключения к базе собирается в одном
+месте из `DB_USER`/`DB_PASSWORD`/`DB_NAME` и потому не расходится между миграциями, сидом и
+бэкендом. В `.env` остались только те переменные, которые реально читает бэкенд
+(`backend/src/config/env.ts`) плюс порты хоста и режим фронта. `.env.example` удалён: два файла со
+списком настроек — это два источника правды. `.env` закоммичен намеренно (секретов нет, креды
+демонстрационные, почта эмулируется), `.gitignore` это разрешает явно; причина описана в README.
+
+## 3. Холодный старт: контейнеры убиты, том базы удалён, всё поднято заново
+
+```
+$ docker compose down -v --remove-orphans
+ Container sharing-db Removed
+ Network transport-sharing_default Removing
+ Volume transport-sharing_db-data Removing
+ Volume transport-sharing_db-data Removed
+
+$ docker volume ls | grep transport-sharing
+томов проекта нет
+
+$ docker compose up -d --build
+ Container sharing-db-migrate Exited          # миграции применились
+ Container sharing-db-seed Exited             # данные загружены из mock/
+ Container sharing-backend Healthy
+ Container sharing-frontend Started
+
+$ docker compose ps --format '{{.Service}}: {{.Status}}'
+backend: Up 6 seconds (healthy)
+db: Up 15 seconds (healthy)
+frontend: Up Less than a second
+```
+
+Порядок «схема → данные → сервис» задан через `depends_on`: сид не может начаться раньше миграций,
+бэкенд — раньше сида, фронт — раньше здорового бэкенда. Ничего вручную не запускается.
+
+## 4. Что в базе после холодного старта
+
+```
+$ docker exec sharing-db psql -U sharing -d sharing -t -c "select status, count(*) from scooters group by status order by 1;"
+ free        |    19
+ in_ride     |     5
+ reserved    |     6
+ unavailable |    10
+
+$ ... select email, rides, invoices from users order by email;
+ alan@example.com |     8 |        7
+ bora@example.com |     2 |        1
+ demo2@sharing.kg |     0 |        0
+ demo@sharing.kg  |     8 |        8
+ dina@example.com |     3 |        2
+ erik@example.com |     7 |        6
+ fiza@example.com |     2 |        1
+
+$ ... select s.code, s.status, r.id is not null as in_ride from scooters s
+      left join rides r on r.scooter_id = s.id and r.status = 'active' where s.code = 'SC-030';
+ SC-030 | in_ride | t
+```
+
+Все четыре состояния самоката присутствуют, семь учётных записей на месте, у демо-аккаунтов есть
+история поездок и счетов, самокат вне зоны с открытой поездкой (случай блокировки мотора) — тоже.
+Тарифы в базе не хранятся: это константы домена (`shared/src/`), одинаковые для сервера, мок-режима
+и тестов.
+
+## 5. Проверка снаружи, как браузер (через nginx, а не по внутренним портам)
+
+```
+$ curl -fsS http://localhost:8088/api/health
+{"status":"ok","version":"0.1.0","serverTime":"2026-10-14T09:05:02.356Z","uptimeSeconds":13.862,
+ "db":{"ok":true,"latencyMs":0,"migrationsApplied":2}}
+
+$ curl -fsS -o /dev/null -w 'страница: %{http_code}\n' http://localhost:8088/
+страница: 200
+
+$ curl -fsS 'http://localhost:8088/api/scooters?limit=3'
+{"scooters":[{"id":"a7ab5a66-…","code":"SC-001","model":"Ninebot Max G30","status":"free","batteryPct":58,"lat":42.867…
+
+$ bash scripts/demo.sh
+ Итог: два клиента работают одновременно, чужую бронь перехватить нельзя,
+ состояние парка общее.
+```
+
+## 6. Занятый порт: значение меняется, а не «надо править код»
+
+```
+$ FRONTEND_PORT=8090 docker compose up -d frontend
+ Container sharing-frontend Started
+$ curl -fsS -o /dev/null -w 'страница на 8090: %{http_code}\n' http://localhost:8090/
+страница на 8090: 200
+$ curl -fsS http://localhost:8090/api/health
+{"status":"ok", …, "db":{"ok":true …}}
+$ curl -fsS -o /dev/null -w 'старый порт 8088: %{http_code}\n' http://localhost:8088/ || echo 'порт 8088 закрыт — верно'
+порт 8088 закрыт — верно
+
+$ docker compose up -d frontend      # возврат к дефолту из .env
+$ curl -fsS -o /dev/null -w 'страница на 8088: %{http_code}\n' http://localhost:8088/
+страница на 8088: 200
+```
+
+Порт меняется только для доступа снаружи; внутри сети сервисы общаются по своим портам, а фронт
+проксирует `/api` и `/ws`, поэтому адреса в коде не зависят от выбранного порта.
+
+## 7. Документ о подсчётах локальной модели удалён
+
+`metrics/local-savings.json`, `metrics/README.md` и скрипт `scripts/collect-savings.mjs` удалены
+вместе со ссылками в README, ROADMAP, STATUS и `npm run metrics`: от локального воркера отказались
+из-за скорости, поэтому цифры за несколько первых батчей не описывают проект — как отчёт они
+неполны. Сам факт и причина отказа описаны в `docs/AI_USAGE.md` (§5), ADR-018 в `docs/DECISIONS.md`
+помечен отменённым с пояснением, чтобы решение осталось в истории.
+
+## 8. Проверки после правок
+
+- `npm run check` с нуля: типы, lint и юнит-тесты всех пакетов.
+- Живой e2e против собранных контейнеров: 7/7 (два клиента, бронь, поездка, выезд из зоны).

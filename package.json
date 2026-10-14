@@ -22,7 +22,6 @@
     "dev:backend": "npm run dev -w backend",
     "migrate": "npm run migrate -w backend",
     "seed": "npm run seed -w backend",
-    "metrics": "node scripts/collect-savings.mjs",
     "check:pricing": "node scripts/check-pricing.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

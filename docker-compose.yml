@@ -4,30 +4,40 @@
 # (`db-migrate`, `db-seed`), которые выполняют миграции и наполнение базы и завершаются: держать
 # их запущенными незачем, а порядок «схема → данные → сервис» задаётся через depends_on.
 #
-# Наружу смотрят только фронт (8088) и база (5433 — чтобы можно было подключиться psql-ом при
-# отладке). Бэкенд наружу не публикуется: фронт проксирует к нему /api и /ws.
+# Наружу смотрят только фронт и база (база — чтобы подключиться psql-ом при отладке). Бэкенд
+# наружу не публикуется: фронт проксирует к нему /api и /ws.
+#
+# Всё, что может отличаться на другой машине, берётся из окружения. Файл `.env` лежит рядом и
+# закоммичен: секретов в проекте нет, а запуск должен работать сразу — включая случай, когда на
+# машине занят стандартный порт (тогда порт переопределяется в `.env` или переменной при запуске).
+# Значения по умолчанию совпадают с `.env`, поэтому compose работает и без него.
 
 name: transport-sharing
+
+# Строка подключения к базе — общая для миграций, сида и бэкенда: собранная в одном месте,
+# она не разъедется между сервисами при смене имени базы или пароля.
+x-database-url: &database-url
+  postgres://${DB_USER:-sharing}:${DB_PASSWORD:-sharing}@db:5432/${DB_NAME:-sharing}
 
 services:
   db:
     image: postgres:17-alpine
     container_name: sharing-db
     environment:
-      POSTGRES_USER: sharing
-      POSTGRES_PASSWORD: sharing
-      POSTGRES_DB: sharing
+      POSTGRES_USER: ${DB_USER:-sharing}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sharing}
+      POSTGRES_DB: ${DB_NAME:-sharing}
       # Русский язык в сообщениях и сортировке: данные локализованы, «ё» должна вести себя как «е»-соседка.
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
     ports:
-      - '5433:5432'
+      - '${DB_PORT:-5433}:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
       # Отдельная база для интеграционных проверок: тесты чистят таблицы и не должны трогать
       # данные приложения (см. RUNBOOK.md §4).
       - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U sharing -d sharing']
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-sharing} -d ${DB_NAME:-sharing}']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -96,10 +106,10 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         # Как фронт обращается к данным из браузера: через тот же origin, что и страница.
-        VITE_API_MODE: http
+        VITE_API_MODE: ${VITE_API_MODE:-http}
     container_name: sharing-frontend
     ports:
-      - '8088:80'
+      - '${FRONTEND_PORT:-8088}:80'
     depends_on:
       backend:
         condition: service_healthy

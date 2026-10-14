@@ -49,7 +49,7 @@ export function useRideZoneNotice({ active, position }: ZoneNoticeParams): void 
           title: 'Снова в зоне обслуживания',
           description: 'Мотор разблокирован — поездку можно завершить.',
           tone: 'success',
-          autoHideMs: 5000,
+          autoHideMs: 8000,
         });
       }
       return;
