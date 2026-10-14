@@ -73,6 +73,45 @@ test.describe('карта парка', () => {
     await expect(card).toHaveCount(0);
   });
 
+  test('выбранный на карте самокат виден в списке: список подводится к строке', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('park-list').getByRole('button').first()).toBeVisible();
+
+    const viewport = page.locator('.ol-viewport');
+    const box = await viewport.boundingBox();
+    if (box === null) {
+      throw new Error('карта не заняла место на странице');
+    }
+
+    // Ищем маркер так же, как его находит пользователь: курсор над точкой становится указателем.
+    let clicked = false;
+    const stepX = (box.width - 80) / 14;
+    const stepY = (box.height - 80) / 10;
+    for (let row = 0; row < 10 && !clicked; row += 1) {
+      for (let column = 0; column < 14 && !clicked; column += 1) {
+        const x = Math.round(box.x + 40 + column * stepX);
+        const y = Math.round(box.y + 40 + row * stepY);
+        await page.mouse.move(x, y);
+        if (await viewport.evaluate((element) => element.style.cursor === 'pointer')) {
+          await page.mouse.click(x, y);
+          clicked = true;
+        }
+      }
+    }
+    expect(clicked, 'на карте должен найтись маркер').toBe(true);
+
+    // Список отсортирован по удалённости и прокручивается: выбранная строка обязана быть в виде,
+    // иначе непонятно, что открыто в панели (ровно на это и жаловались).
+    const list = page.getByTestId('park-list');
+    const listBox = await list.boundingBox();
+    const rowBox = await list.locator('[aria-current="true"]').boundingBox();
+    if (listBox === null || rowBox === null) {
+      throw new Error('список или выбранная строка не найдены');
+    }
+    expect(rowBox.y).toBeGreaterThanOrEqual(listBox.y - 1);
+    expect(rowBox.y + rowBox.height).toBeLessThanOrEqual(listBox.y + listBox.height + 1);
+  });
+
   test('панель парка считает сводку по статусам', async ({ page }) => {
     await page.goto('/');
 

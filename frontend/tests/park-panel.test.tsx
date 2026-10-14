@@ -85,6 +85,28 @@ describe('ParkPanel', () => {
     expect(note).toHaveTextContent('только ваш самокат и зона обслуживания');
   });
 
+  it('показывает, сколько строк скрыто фильтром: список — это не весь парк', () => {
+    // Фильтр снял «В поездке»: список короче парка, значит часть строк скрыта.
+    renderPanel({ scooters: [FAR, NEAR], statusFilter: ['free'], onToggleStatus: vi.fn() });
+
+    // Без этой строки снятый фильтр читается как «самокаты пропали».
+    expect(screen.getByTestId('park-shown-count')).toHaveTextContent('остальные скрыты фильтром состояний');
+    const counted = /Показано (\d+) из (\d+)/.exec(screen.getByTestId('park-shown-count').textContent ?? '');
+    expect(counted).not.toBeNull();
+    expect(Number(counted?.[1])).toBeLessThan(Number(counted?.[2]));
+  });
+
+  it('подводит список к выбранному самокату: строка могла быть вне вида', () => {
+    const scrollIntoView = vi.fn();
+    // В jsdom прокрутки нет: проверяем сам вызов — он и есть «подвести список к выбору».
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    // Выбор приходит извне (клик по маркеру на карте), список отсортирован по удалённости.
+    renderPanel({ selectedId: 'far' });
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+  });
+
   it('кнопка «Показать все состояния» возвращает полный фильтр', async () => {
     const user = userEvent.setup();
     const props = renderPanel({ scooters: [FAR, NEAR], statusFilter: ['free'] });

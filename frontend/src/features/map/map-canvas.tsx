@@ -3,7 +3,7 @@ import type Map from 'ol/Map';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import type Feature from 'ol/Feature';
-import type Point from 'ol/geom/Point';
+import Point from 'ol/geom/Point';
 import { fromLonLat } from 'ol/proj';
 import type VectorSource from 'ol/source/Vector';
 import { Minus, Plus } from 'lucide-react';
@@ -17,6 +17,7 @@ import { createBasemapLayer, createZoneLayer, zoneExtent, ZONE_LAYER_Z_INDEX } f
 import {
   createMarkerStyle,
   createParkLayer,
+  nearestScooterId,
   PARK_LAYER_Z_INDEX,
   readScooterId,
 } from '../../lib/map/scooter-layer';
@@ -151,18 +152,33 @@ export function MapCanvas({
     });
     observer.observe(container);
 
-    /** Самокат под точкой: попадание считается с запасом, чтобы маркер в 7 px не приходилось ловить. */
+    /**
+     * Самокат под точкой клика.
+     *
+     * Попадание считается с запасом (чтобы маркер в 7 px не приходилось ловить), но из всех
+     * маркеров в радиусе берётся ближайший к клику: иначе при близко стоящих самокатах
+     * открывался бы соседний — пользователь видел в панели не тот самокат, по которому щёлкнул.
+     */
     const scooterAt = (pixel: number[]): string | null => {
-      let found: string | null = null;
+      const candidates: { id: string; pixel: number[] }[] = [];
       map.forEachFeatureAtPixel(
         pixel,
         (feature) => {
-          found = readScooterId(feature);
-          return found === null ? undefined : true;
+          const id = readScooterId(feature);
+          const geometry = feature.getGeometry();
+          // Проверка классом, а не строкой типа: так TypeScript знает, что у геометрии есть
+          // координаты, и приведение типов (запрещено рулсетом) не нужно.
+          if (id !== null && geometry instanceof Point) {
+            const center = map.getPixelFromCoordinate(geometry.getCoordinates());
+            if (center !== undefined) {
+              candidates.push({ id, pixel: center });
+            }
+          }
+          return undefined;
         },
         { hitTolerance: 8, layerFilter: (layer) => layer.getZIndex() === PARK_LAYER_Z_INDEX },
       );
-      return found;
+      return nearestScooterId(candidates, pixel);
     };
 
     // Где нажали кнопку: движение между нажатием и отпусканием отличает клик от перетаскивания.

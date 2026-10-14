@@ -7,6 +7,7 @@ import Style from 'ol/style/Style';
 import { describe, expect, it } from 'vitest';
 
 import { basemapFor, BASEMAPS, DEFAULT_BASEMAP, MAP_CENTER, MAP_ZOOM, ZONE } from '../src/config/map';
+import { nearestScooterId } from '../src/lib/map/scooter-layer';
 import { createMapView, createParkMap } from '../src/lib/map/create-map';
 import {
   createBasemapLayer,
@@ -28,6 +29,26 @@ function ringOf(zone: typeof ZONE): number[][] {
   }
   return geometry.getCoordinates()[0] ?? [];
 }
+
+describe('выбор ближайшего маркера', () => {
+  it('из нескольких маркеров в радиусе берётся ближайший к точке клика', () => {
+    // Так выглядит плотная стоянка: три самоката в пределах допуска попадания.
+    const candidates = [
+      { id: 'дальний', pixel: [100, 100] },
+      { id: 'средний', pixel: [104, 100] },
+      { id: 'ближний', pixel: [106, 101] },
+    ];
+
+    // Кликнули рядом с «ближним»: именно он должен открыться, а не первый в списке объектов.
+    expect(nearestScooterId(candidates, [107, 102])).toBe('ближний');
+    expect(nearestScooterId(candidates, [99, 100])).toBe('дальний');
+  });
+
+  it('без маркеров под точкой возвращает null, координаты без проекции не ломают выбор', () => {
+    expect(nearestScooterId([], [10, 10])).toBeNull();
+    expect(nearestScooterId([{ id: 'без-пикселя', pixel: [] }], [10, 10])).toBeNull();
+  });
+});
 
 describe('слой зоны обслуживания', () => {
   it('зона превращается в один полигон', () => {

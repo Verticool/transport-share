@@ -134,6 +134,37 @@ export function createParkLayer(scooters: Scooter[], theme: 'light' | 'dark'): V
   });
 }
 
+/**
+ * Победитель клика по карте: ближайший к точке клика маркер.
+ *
+ * OpenLayers обходит объекты в порядке слоя и отдаёт первый попавшийся в радиусе попадания. При
+ * близко стоящих самокатах это мог быть не тот, по которому щёлкнули: пользователь видел в панели
+ * соседний самокат. Поэтому из всех кандидатов берём ближайший по экранному расстоянию.
+ */
+export function nearestScooterId(
+  candidates: { id: string; pixel: number[] }[],
+  point: number[],
+): string | null {
+  const [px, py] = point;
+  if (px === undefined || py === undefined) {
+    return null;
+  }
+  let bestId: string | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const candidate of candidates) {
+    const [cx, cy] = candidate.pixel;
+    if (cx === undefined || cy === undefined) {
+      continue;
+    }
+    const distance = Math.hypot(cx - px, cy - py);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestId = candidate.id;
+    }
+  }
+  return bestId;
+}
+
 /** Сколько самокатов каждого статуса в наборе — для легенды и счётчика парка. */
 export function countByStatus(scooters: Scooter[]): Record<ScooterStatus, number> {
   const counts: Record<ScooterStatus, number> = {

@@ -1,5 +1,5 @@
 import type { Scooter, ScooterStatus } from '@sharing/shared';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -52,6 +52,16 @@ export function ParkPanel({
 }: ParkPanelProps) {
   const counts = useMemo(() => countByStatus(allScooters), [allScooters]);
   const allEnabled = statusFilter.length === SCOOTER_STATUS_ORDER.length;
+  // Список отсортирован по удалённости и прокручивается: выбранный самокат мог оказаться за
+  // пределами вида, и тогда непонятно, что именно открыто в панели. Подводим список к выбору.
+  const listRef = useRef<HTMLUListElement | null>(null);
+  useEffect(() => {
+    if (selectedId === null) {
+      return;
+    }
+    const row = listRef.current?.querySelector(`[data-scooter-id="${selectedId}"]`);
+    row?.scrollIntoView({ block: 'nearest' });
+  }, [selectedId]);
 
   const visible = useMemo(
     () =>
@@ -153,6 +163,7 @@ export function ParkPanel({
 
         {error === null && (
           <ul
+            ref={listRef}
             className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1"
             aria-label="Самокаты поблизости"
             data-testid="park-list"
@@ -161,6 +172,7 @@ export function ParkPanel({
               <li key={scooter.id}>
                 <button
                   type="button"
+                  data-scooter-id={scooter.id}
                   onClick={() => onSelect(scooter.id)}
                   aria-current={scooter.id === selectedId}
                   className={cn(
@@ -180,6 +192,14 @@ export function ParkPanel({
               </li>
             ))}
           </ul>
+        )}
+
+        {/* Когда фильтр не полный, список — это не весь парк: без этой строки кажется, что
+            самокаты пропали (именно так и читается «не отображается SC-010 и SC-013»). */}
+        {error === null && !loading && visible.length !== allScooters.length && (
+          <p className="text-xs text-muted-foreground" data-testid="park-shown-count">
+            {`Показано ${visible.length} из ${allScooters.length} — остальные скрыты фильтром состояний`}
+          </p>
         )}
 
         {error === null && visible.length === 0 && !loading && (
