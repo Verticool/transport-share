@@ -3,7 +3,7 @@ import { PublicUserSchema } from '@sharing/shared';
 import { create } from 'zustand';
 import { z } from 'zod';
 
-import { writeLocalStorage } from '../lib/storage';
+import { removeLocalStorage, writeLocalStorage } from '../lib/storage';
 
 export const SESSION_STORAGE_KEY = 'dvizh:session';
 
@@ -45,8 +45,22 @@ function readStoredSession(): { token: string; refreshToken: string; user: Publi
     return null;
   }
 
-  const parsed = StoredSessionSchema.safeParse(JSON.parse(raw));
-  return parsed.success ? parsed.data : null;
+  // Разбор JSON — тоже проверка внешних данных: запись могла остаться пустой от прежней версии
+  // приложения или испортиться. Без этого исключение при разборе роняло интерфейс при запуске.
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    removeLocalStorage(SESSION_STORAGE_KEY);
+    return null;
+  }
+
+  const parsed = StoredSessionSchema.safeParse(value);
+  if (!parsed.success) {
+    removeLocalStorage(SESSION_STORAGE_KEY);
+    return null;
+  }
+  return parsed.data;
 }
 
 /** Сессия пользователя: общая для шапки, кабинета и всех защищённых экранов. */
@@ -77,7 +91,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
     },
 
     signOut: () => {
-      writeLocalStorage(SESSION_STORAGE_KEY, '');
+      removeLocalStorage(SESSION_STORAGE_KEY);
       set({ token: null, refreshToken: null, user: null });
     },
   };

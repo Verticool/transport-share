@@ -23,6 +23,20 @@ export function zodParseLocalStorage<T extends string>(
   return parsed.success ? parsed.data : fallback;
 }
 
+/**
+ * Удаляет ключ, молча игнорируя недоступное хранилище.
+ *
+ * Затирать запись пустой строкой нельзя: пустая строка — не JSON, и следующий запуск падает на
+ * её разборе (так и случалось при выходе из сессии).
+ */
+export function removeLocalStorage(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Намеренно ничего: недоступное хранилище не должно ломать интерфейс.
+  }
+}
+
 /** Записывает значение, молча игнорируя недоступное хранилище (приватный режим, квота). */
 export function writeLocalStorage(key: string, value: string): void {
   try {
