@@ -96,9 +96,41 @@ describe('ParkPanel', () => {
     expect(listCodes()).toEqual(['DV-900', 'DV-001']);
   });
 
-  it('сортирует список по удалённости от центра города', () => {
-    renderPanel();
-    expect(listCodes()).toEqual(['DV-001', 'DV-003', 'DV-002']);
+  it('по умолчанию сортирует по доступности: свободные, забронированные, в поездке, недоступные', () => {
+    renderPanel({
+      scooters: [
+        BUSY,
+        makeScooter({ id: 'res', code: 'DV-004', status: 'reserved', lat: 42.88, lng: 74.58 }),
+        makeScooter({ id: 'off', code: 'DV-005', status: 'unavailable', lat: 42.88, lng: 74.58 }),
+        NEAR,
+      ],
+      allScooters: [BUSY, NEAR],
+    });
+
+    // Раньше список был просто по удалённости — теперь первым идёт то, что можно взять.
+    expect(listCodes()).toEqual(['DV-001', 'DV-004', 'DV-003', 'DV-005']);
+  });
+
+  it('сортировка по колонкам: заряд, расстояние и переворот порядка повторным кликом', async () => {
+    const user = userEvent.setup();
+    renderPanel({
+      scooters: [
+        makeScooter({ id: 'a', code: 'DV-010', status: 'free', batteryPct: 80, lat: 42.87, lng: 74.57 }),
+        makeScooter({ id: 'b', code: 'DV-020', status: 'free', batteryPct: 30, lat: 42.9, lng: 74.62 }),
+      ],
+    });
+
+    // Сортировка по заряду: сначала самый разряженный.
+    await user.click(screen.getByTestId('park-sort-battery'));
+    expect(listCodes()).toEqual(['DV-020', 'DV-010']);
+
+    // Повторный клик по той же колонке переворачивает порядок.
+    await user.click(screen.getByTestId('park-sort-battery'));
+    expect(listCodes()).toEqual(['DV-010', 'DV-020']);
+
+    // Переход на другую колонку начинает с возрастания: ближе к центру — выше.
+    await user.click(screen.getByTestId('park-sort-distance'));
+    expect(listCodes()).toEqual(['DV-010', 'DV-020']);
   });
 
   it('снятое состояние убирает самокаты из списка и помечается как выключенное', async () => {

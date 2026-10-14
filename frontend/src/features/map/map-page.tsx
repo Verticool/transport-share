@@ -213,6 +213,7 @@ export function MapPage() {
 
       <aside
         ref={asideRef}
+        data-scroll-container
         className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-0.5 lg:gap-4"
         aria-label="Панель парка"
       >

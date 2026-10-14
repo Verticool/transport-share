@@ -1,5 +1,5 @@
 import type { Scooter, ScooterStatus } from '@sharing/shared';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -40,6 +40,52 @@ export interface ParkPanelProps {
  * и на карте, и в списке. Сортировка по расстоянию от центра — это то, что нужно человеку
  * («что ближе»), а не порядок из файла данных.
  */
+/** Колонки, по которым сортируется список. */
+type SortKey = 'status' | 'battery' | 'distance';
+
+interface SortState {
+  key: SortKey;
+  direction: 'asc' | 'desc';
+}
+
+/** Порядок по умолчанию — по доступности: свободные, забронированные, в поездке, недоступные. */
+const DEFAULT_SORT: SortState = { key: 'status', direction: 'asc' };
+
+/** Заголовок колонки: клик задаёт сортировку, повторный — переворачивает порядок. */
+function SortHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  align = 'left',
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+  align?: 'left' | 'right';
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      aria-label={`Сортировать по «${label}»`}
+      aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+      data-testid={`park-sort-${sortKey}`}
+      className={cn(
+        'flex items-center gap-1 whitespace-nowrap rounded px-1 py-0.5 transition-colors hover:bg-accent hover:text-accent-foreground',
+        align === 'right' && 'justify-end',
+        active && 'font-medium text-foreground',
+      )}
+    >
+      {label}
+      {/* Стрелка показывает, куда смотрит порядок: без неё непонятно, активна ли колонка. */}
+      {active && <span aria-hidden>{sort.direction === 'asc' ? '↑' : '↓'}</span>}
+    </button>
+  );
+}
+
 export function ParkPanel({
   scooters,
   allScooters,
@@ -61,8 +107,15 @@ export function ParkPanel({
     if (selectedId === null) {
       return;
     }
-    scrollRowIntoList(listRef.current, listRef.current?.querySelector(`[data-scooter-id="${selectedId}"]`) ?? null);
+    const list = listRef.current;
+    const row = list?.querySelector(`[data-scooter-id="${selectedId}"]`) ?? null;
+    // Прокручивается именно колонка панелей: у списка своего скролла нет, иначе содержимое
+    // вылезало за фон карточки (замер: список 1360 px при карточке 492 px).
+    const container = list?.closest('[data-scroll-container]') ?? null;
+    scrollRowIntoList(container, row);
   }, [selectedId]);
+
+  const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
 
   // Точка отсчёта одна и та же для всего парка — центр зоны обслуживания. Это НЕ «сколько проехал
   // самокат»: при движении к центру число уменьшается, от центра — растёт, и это ожидаемо для
@@ -72,13 +125,37 @@ export function ParkPanel({
     return new Map(scooters.map((scooter) => [scooter.id, scooterDistanceM(scooter, center)]));
   }, [scooters]);
 
-  const visible = useMemo(
-    () => [...scooters].sort((left, right) => (distances.get(left.id) ?? 0) - (distances.get(right.id) ?? 0)),
-    [scooters, distances],
-  );
+  const visible = useMemo(() => {
+    const rank = new Map(SCOOTER_STATUS_ORDER.map((status, index) => [status, index]));
+    const factor = sort.direction === 'asc' ? 1 : -1;
+    return [...scooters].sort((left, right) => {
+      if (sort.key === 'battery') {
+        return factor * (left.batteryPct - right.batteryPct);
+      }
+      if (sort.key === 'distance') {
+        return factor * ((distances.get(left.id) ?? 0) - (distances.get(right.id) ?? 0));
+      }
+      // По доступности: внутри одной группы — по удалённости, чтобы порядок был предсказуемым.
+      const byStatus = factor * ((rank.get(left.status) ?? 0) - (rank.get(right.status) ?? 0));
+      return byStatus !== 0
+        ? byStatus
+        : (distances.get(left.id) ?? 0) - (distances.get(right.id) ?? 0);
+    });
+  }, [scooters, distances, sort]);
+
+  /** Клик по колонке: та же колонка переворачивает порядок, новая — начинает с возрастания. */
+  const toggleSort = (key: SortKey): void => {
+    setSort((current) =>
+      current.key === key
+        ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'asc' },
+    );
+  };
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col">
+    // Карточка растягивается по содержимому (без flex-1 и min-h-0): иначе она сжималась до высоты
+    // колонки, а таблица выходила за её фон, и фон «отсекался».
+    <Card className="flex flex-none flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Парк
@@ -170,12 +247,12 @@ export function ParkPanel({
             Подпись колонки важна: это удалённость от центра зоны, а не путь поездки. */}
         {error === null && visible.length > 0 && (
           <div
-            className="grid grid-cols-[minmax(0,1fr)_2.5rem_4.5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
+            className="grid grid-cols-[minmax(0,1fr)_3rem_5rem] items-center gap-2 px-2 text-xs text-muted-foreground"
             data-testid="park-list-header"
           >
-            <span className="font-medium">Самокат</span>
-            <span className="text-right">Заряд</span>
-            <span className="whitespace-nowrap text-right">До центра</span>
+            <SortHeader label="Самокат" sortKey="status" sort={sort} onSort={toggleSort} />
+            <SortHeader label="Заряд" sortKey="battery" sort={sort} onSort={toggleSort} align="right" />
+            <SortHeader label="До центра" sortKey="distance" sort={sort} onSort={toggleSort} align="right" />
           </div>
         )}
 
@@ -183,15 +260,11 @@ export function ParkPanel({
           <ul
             ref={listRef}
             /*
-             * Телефон: список растёт по содержимому и прокручивается вместе с панелью — одной
-             * прокруткой, а не двумя вложенными. Широкий экран: своя прокрутка с минимальной
-             * высотой, чтобы список не сжимался в ноль, когда панель поездки разрастается
-             * (иначе строки уезжают за пределы вида и клик по ним невозможен).
-             *
-             * Отрицательных отступов на телефоне нет: из-за них подсветка строки выступала за
-             * внутренние поля карточки и читалась как «таблица вылезла за фон».
+             * Прокрутка одна на всех размерах — у колонки панелей. Список растёт по содержимому
+             * и никогда не обрезается своим overflow: именно из-за него таблица выходила за фон
+             * карточки. Отрицательные отступы только на широком экране.
              */
-            className="flex-1 lg:-mx-1 lg:min-h-32 lg:overflow-y-auto lg:px-1"
+            className="lg:-mx-1 lg:px-1"
             aria-label="Самокаты: удалённость от центра зоны обслуживания"
             data-testid="park-list"
           >
@@ -203,7 +276,7 @@ export function ParkPanel({
                   onClick={() => onSelect(scooter.id)}
                   aria-current={scooter.id === selectedId}
                   className={cn(
-                    'grid w-full grid-cols-[minmax(0,1fr)_2.5rem_4.5rem] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent',
+                    'grid w-full grid-cols-[minmax(0,1fr)_3rem_5rem] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent',
                     scooter.id === selectedId && 'bg-accent',
                   )}
                 >

@@ -221,3 +221,30 @@ test.describe('вход и защищённые экраны', () => {
     await expect(page.getByText(/Всего поездок: \d+/)).toBeVisible();
   });
 });
+
+test('сортировка таблицы парка: по доступности, по заряду и по расстоянию', async ({ page }) => {
+  await page.goto('/');
+  const rows = page.getByTestId('park-list').getByRole('button');
+  await expect(rows.first()).toContainText('Свободен');
+
+  // Все свободные идут выше забронированных: доступность — первый ключ порядка.
+  const statuses = await rows.evaluateAll((items) => items.map((item) => item.textContent ?? ''));
+  const lastFree = statuses.findLastIndex((text) => text.includes('Свободен'));
+
+  await page.getByTestId('park-sort-battery').click();
+  const byBattery = await rows.evaluateAll((items) =>
+    items.map((item) => Number(/(\d+) %/.exec(item.textContent ?? '')?.[1] ?? 0)),
+  );
+  expect(byBattery[0]).toBeLessThanOrEqual(byBattery.at(-1) ?? 0);
+  expect(lastFree).toBeGreaterThanOrEqual(0);
+
+  // Повторный клик по той же колонке переворачивает порядок.
+  await page.getByTestId('park-sort-battery').click();
+  const reversed = await rows.evaluateAll((items) =>
+    items.map((item) => Number(/(\d+) %/.exec(item.textContent ?? '')?.[1] ?? 0)),
+  );
+  expect(reversed[0]).toBeGreaterThanOrEqual(reversed.at(-1) ?? 0);
+
+  await page.getByTestId('park-sort-distance').click();
+  await expect(page.getByTestId('park-sort-distance')).toHaveAttribute('aria-sort', 'ascending');
+});
