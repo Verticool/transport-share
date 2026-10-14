@@ -11,6 +11,7 @@ import { MapCanvas } from './map-canvas';
 import { ParkPanel } from './park-panel';
 import { ScooterCard } from './scooter-card';
 import { scooterDistanceM } from '../../lib/map/scooter-layer';
+import { useRideZoneNotice } from '../notifications/use-ride-zone-notice';
 import { useNotificationsStore } from '../../stores/notifications';
 import { usePark } from './use-park';
 import { SCOOTER_STATUS_ORDER } from '../../config/scooter-status';
@@ -175,6 +176,13 @@ export function MapPage() {
   }, [activeRide, rideBattery, ride.ride?.id, clearPersistent, setPersistent, toast]);
   // Поездка или бронь появились — поднимаем колонку к началу: панель с управлением должна быть
   // видна сразу, а не оставаться прокрученной вниз к списку парка.
+  // Выезд за границу зоны: полоса под хедером и одно всплывающее оповещение на выезд. Положение
+  // берём из парка — это те же данные, по которым интерфейс решает, можно ли завершить поездку.
+  useRideZoneNotice({
+    active: activeRide,
+    position: rideScooter === null ? null : { lat: rideScooter.lat, lng: rideScooter.lng },
+  });
+
   // Поездка закрылась по разряду: сообщаем всплывающим оповещением и убираем полосу про батарею.
   useEffect(() => {
     const current = ride.ride;
