@@ -29,6 +29,9 @@ export interface BookingState {
   refresh: () => void;
 }
 
+/** Как часто спрашивать источник, пока бронь с истёкшим сроком ещё не снята. */
+const EXPIRE_POLL_MS = 2_000;
+
 export interface UseBookingOptions {
   /** Часы клиента — инъекция для тестов (RULES §F: без Date.now() напрямую). */
   now?: () => number;
@@ -126,13 +129,23 @@ export function useBooking(client?: ApiClient, options: UseBookingOptions = {}):
   const remainingMs =
     booking === null ? 0 : Math.max(0, Date.parse(booking.expiresAt) - (nowMs + skewMs));
 
-  // Срок вышел — спрашиваем источник данных: он снимет бронь и отдаст самокат в парк.
+  // Срок вышел — спрашиваем источник данных, пока он не снимет бронь и не вернёт самокат в парк.
+  //
+  // Одного запроса мало: снятие делает таймер источника (на сервере — тик раз в 5 секунд), поэтому
+  // первый ответ может ещё содержать ту же бронь. Раньше запрос был ровно один: если он приходил
+  // до тика сервиса, панель оставалась висеть на нуле, а самокат — заблокированным.
   useEffect(() => {
-    if (booking !== null && remainingMs === 0) {
-      // Срок вышел — спрашиваем источник данных, он снимет бронь и вернёт самокат в парк.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      void refresh();
+    if (booking === null || remainingMs > 0) {
+      return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh();
+    const timer = setInterval(() => {
+      void refresh();
+    }, EXPIRE_POLL_MS);
+    return () => {
+      clearInterval(timer);
+    };
   }, [booking, remainingMs, refresh]);
 
   const book = useCallback(

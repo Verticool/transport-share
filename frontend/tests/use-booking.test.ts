@@ -15,6 +15,9 @@ import { OTHER_EMAIL, mockUserByEmail, signInAsDemo, tokenFor } from './helpers/
 const MOCK_START = Date.parse('2026-10-13T10:00:00.000Z');
 const TICK_MS = 20;
 
+/** Пауза, за которую хук успевает сходить за бронью повторно (опрос идёт раз в 2 секунды). */
+const EXPIRE_POLL_WAIT_MS = 2_400;
+
 const scooters = parseMockFile('scooters.json', z.array(ScooterSchema));
 const freeScooter = scooters.find((scooter) => scooter.status === 'free');
 if (freeScooter === undefined) {
@@ -112,6 +115,47 @@ describe('useBooking', () => {
       expect(result.current.booking).toBeNull();
     });
     expect(result.current.remainingMs).toBe(0);
+  });
+
+  it('дожидается снятия брони, даже если первый ответ после срока вернул её же', async () => {
+    // Так ведёт себя сервер: снятие делает тик раз в несколько секунд, поэтому сразу после выхода
+    // срока ответ может ещё содержать бронь. Интерфейс обязан продолжать спрашивать, иначе панель
+    // висит на нуле, а самокат остаётся заблокированным.
+    const { result, client, advance } = setup();
+    await waitFor(() => {
+      expect(result.current.booking).toBeNull();
+    });
+
+    const scooter = freeScooter;
+    await act(async () => {
+      await result.current.book(scooter.id);
+    });
+    await waitFor(() => {
+      expect(result.current.booking).not.toBeNull();
+    });
+
+    // Ответ после выхода срока ещё содержит бронь — так ведёт себя сервер до своего тика.
+    const stuck = result.current.booking;
+    if (stuck === null) {
+      throw new Error('бронь не создана');
+    }
+    let stale = 1;
+    client.getActiveBooking = async () => {
+      if (stale > 0) {
+        stale -= 1;
+        return { booking: stuck, serverTime: new Date().toISOString() };
+      }
+      return null;
+    };
+
+    await advance(BOOKING_TTL_MINUTES + 1);
+    await act(async () => {
+      await new Promise((done) => setTimeout(done, EXPIRE_POLL_WAIT_MS));
+    });
+
+    await waitFor(() => {
+      expect(result.current.booking).toBeNull();
+    });
   });
 
   it('снятая по сроку бронь освобождает самокат на стороне данных', async () => {

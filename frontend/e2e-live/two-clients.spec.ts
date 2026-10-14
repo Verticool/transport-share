@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { z } from 'zod';
 
-import { DEMO, SECOND_DEMO, clearAccount, ensureIdle, rowByCode, rowWithStatus, signIn } from './helpers';
+import { DEMO, SECOND_DEMO, clearAccount, ensureIdle, pickFreeScooter, rowByCode, rowWithStatus, signIn } from './helpers';
+
+/** Формы ответов, нужные сценарию с истечением брони. */
+const SessionSchema = z.object({ token: z.string() });
+const ActiveBookingResponseSchema = z.object({ booking: z.object({ id: z.string() }).nullable() });
 
 /** Код самоката из первой строки подписи строки парка: «SC-013» из «SC-013 Свободен 21 %». */
 async function codeOf(row: ReturnType<typeof rowByCode>): Promise<string> {
@@ -222,6 +227,43 @@ test('истёкший доступ продлевается сам: польз�
     const token = String(parsed.token);
     // Токен заменён на рабочий: продление прошло и приложение сохранило новую пару.
     expect(token).not.toBe('stale.access.token');
+  } finally {
+    await context.close();
+  }
+});
+
+test('срок брони вышел — панель уходит сама, самокат возвращается в парк', async ({ browser }) => {
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await clearAccount(page, DEMO);
+    await signIn(page, DEMO);
+    await ensureIdle(page);
+
+    const code = await pickFreeScooter(page);
+    await page.getByTestId('scooter-card').getByRole('button', { name: 'Забронировать' }).click();
+    await expect(page.getByTestId('booking-panel')).toBeVisible();
+
+    // Сдвигаем срок до нуля и ждём: сервер снимает бронь своим тиком, а панель обязана уйти сама,
+    // без перезагрузки — иначе бронь «висит», а самокат остаётся заблокированным по таймеру.
+    const login = await page.request.post('/api/auth/login', { data: DEMO });
+    const session = SessionSchema.parse(await login.json());
+    const auth = { authorization: `Bearer ${session.token}` };
+    const active = ActiveBookingResponseSchema.parse(
+      await (await page.request.get('/api/bookings/active', { headers: auth })).json(),
+    );
+    const bookingId = active.booking?.id;
+    if (bookingId === undefined) {
+      throw new Error('бронь не найдена');
+    }
+    const shortened = await page.request.post(`/api/bookings/${bookingId}/shorten`, {
+      data: { minutes: 15 },
+      headers: auth,
+    });
+    expect(shortened.ok()).toBe(true);
+
+    await expect(page.getByTestId('booking-panel')).toHaveCount(0, { timeout: 15_000 });
+    await expect(rowByCode(page, code)).toContainText('Свободен');
   } finally {
     await context.close();
   }

@@ -116,6 +116,8 @@ export function registerSharingRoutes(app: FastifyInstance, options: SharingRout
     const result = await bookings.tick();
     for (const expired of result.expired) {
       hub.broadcastBookingExpired(expired.id);
+      // Самокат освободился: без этого сообщения он остаётся «Забронирован» у всех, кто смотрит карту.
+      await announceScooter(expired.scooterId);
     }
     for (const expiring of result.expiring) {
       hub.broadcastBookingExpiring(expiring.userId, {

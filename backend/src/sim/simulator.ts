@@ -18,7 +18,7 @@ import type { BookingService } from '../services/booking-service';
 import type { RideService } from '../services/ride-service';
 import { listOpenRideRows } from '../repo/rides';
 import { toRide } from '../repo/rows';
-import { listScooterRows, setScooterBattery } from '../repo/scooters';
+import { findScooterRow, listScooterRows, setScooterBattery } from '../repo/scooters';
 import type { WsHub } from '../ws/hub';
 
 export interface ParkSimulatorDeps {
@@ -232,12 +232,34 @@ export class ParkSimulator {
     return changes;
   }
 
+  /** Сообщает всем состояние самоката: так клиенты видят смену статуса без перезагрузки. */
+  private async announceScooter(scooterId: string): Promise<void> {
+    const scooter = await findScooterRow(this.pool, scooterId);
+    if (scooter === null) {
+      return;
+    }
+    this.hub.broadcastParkDelta([
+      {
+        id: scooter.id,
+        status: scooter.status,
+        batteryPct: scooter.battery_pct,
+        lat: scooter.lat,
+        lng: scooter.lng,
+        lastSeenAt: new Date(this.now()).toISOString(),
+      },
+    ]);
+  }
+
   /** Тик обслуживания броней: снятие просроченных и предупреждение за 3 минуты. */
   async bookingTick(): Promise<void> {
     const result = await this.bookings.tick();
 
     for (const booking of result.expired) {
       this.hub.broadcastBookingExpired(booking.id);
+      // Самокат вернулся в парк, но сам он не двигается и заряд не тратит — значит дельты о нём
+      // не будет. Без этого сообщения клиенты продолжают показывать его занятым, хотя бронь снята:
+      // «бронь висит заблокированная» именно про это.
+      await this.announceScooter(booking.scooterId);
     }
 
     for (const booking of result.expiring) {
